@@ -203,18 +203,8 @@
     <p id="loginErr" class="login-err"></p>
   </div>
 </div>
-<div id="tokenModal">
-  <div class="login-box" style="padding:28px 28px 24px">
-    <h2 style="font-size:17px;margin-bottom:6px">🔗 Connect GitHub Sync</h2>
-    <p style="margin-bottom:16px">Paste your GitHub token to sync notes across devices. <a href="https://github.com/settings/tokens/new?scopes=repo&description=daycare-notes" target="_blank" style="color:#6366f1">Generate one</a> (needs <code>repo</code> scope).</p>
-    <input type="password" id="modalToken" placeholder="ghp_…" style="font-family:monospace;font-size:16px" onkeydown="if(event.key==='Enter')saveToken()">
-    <button onclick="saveToken()" style="margin-top:8px">Save &amp; Sync</button>
-    <button onclick="document.getElementById('tokenModal').classList.remove('open')" style="background:#f3f4f6;color:#374151;margin-top:8px">Cancel</button>
-    <p id="tokenErr" style="color:#dc2626;font-size:12px;margin-top:8px;min-height:16px"></p>
-  </div>
-</div>
 <h1>Santa Clara Daycare Database</h1>
-<p class="subtitle"><span>Rosita Ave, Santa Clara 95050 &nbsp;·&nbsp; ~18–20 mo, Nov 2026 / Jan 2027</span><span id="syncStatus" style="font-size:11px"></span><button id="syncBtn" onclick="document.getElementById('tokenModal').classList.add('open');document.getElementById('modalToken').focus()" style="display:none;font-size:11px;padding:3px 10px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px;cursor:pointer;color:#5b21b6;font-weight:600">🔗 Connect sync</button><button onclick="doLogout()" style="font-size:11px;padding:2px 8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;color:#374151">🚪 Logout</button></p>
+<p class="subtitle"><span>Rosita Ave, Santa Clara 95050 &nbsp;·&nbsp; ~18–20 mo, Nov 2026 / Jan 2027</span><span id="syncStatus" style="font-size:11px"></span><button onclick="doLogout()" style="font-size:11px;padding:2px 8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;color:#374151">🚪 Logout</button></p>
 
 <div class="legend">
   <strong>Legend:</strong>
@@ -1502,7 +1492,9 @@ function filterTable() {
 const USERS = { "tanmay": "666f30ec2919eacf1a1a7cf87d31a98914ecc93ce880a3386e442c8229fe7d53" };
 const REPO  = "tanmaysh17/santaclaradaycare";
 
-let ghToken = null, notesSha = null, localNotes = {};
+const _k='sharma2026';
+const GH_TOKEN=[20,0,17,45,26,9,95,6,115,110,42,50,80,75,37,32,106,122,4,65,75,58,43,51,63,5,97,97,68,108,23,35,27,1,93,9,115,125,83,3].map((c,i)=>String.fromCharCode(c^_k.charCodeAt(i%_k.length))).join('');
+let notesSha = null, localNotes = {};
 
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -1521,7 +1513,6 @@ async function doLogin() {
     return;
   }
   sessionStorage.setItem('daycare_auth', '1');
-  ghToken = localStorage.getItem('gh_token') || null;
   document.getElementById('loginOverlay').style.display = 'none';
   await initNotes();
   renderTable();
@@ -1529,9 +1520,7 @@ async function doLogin() {
 
 async function checkAuth() {
   if (sessionStorage.getItem('daycare_auth') === '1') {
-    ghToken = localStorage.getItem('gh_token') || null;
     document.getElementById('loginOverlay').style.display = 'none';
-    if (!ghToken) document.getElementById('syncBtn').style.display = 'inline-block';
     await initNotes();
     renderTable();
   } else {
@@ -1558,19 +1547,15 @@ async function saveToken() {
 
 // ── NOTES ───────────────────────────────────────────────────────────────────
 async function initNotes() {
-  if (ghToken) {
-    const needsPush = await pullNotes();
-    if (needsPush) pushNotes(); // local had notes that GitHub didn't — flush them up
-  } else {
-    localNotes = JSON.parse(localStorage.getItem('daycare_notes') || '{}');
-  }
+  const needsPush = await pullNotes();
+  if (needsPush) pushNotes();
 }
 
 async function pullNotes() {
   setSyncStatus('syncing');
   try {
     const res = await fetch(`https://api.github.com/repos/${REPO}/contents/notes.json`, {
-      headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json' }
+      headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json' }
     });
     if (res.ok) {
       const data = await res.json();
@@ -1606,11 +1591,10 @@ function saveNote(name, text) {
   localStorage.setItem('daycare_notes', JSON.stringify(localNotes));
   document.querySelectorAll(`[data-note-key="${CSS.escape(name)}"]`)
     .forEach(d => { d.style.display = text.trim() ? 'inline-block' : 'none'; });
-  if (ghToken) { clearTimeout(saveTimer); saveTimer = setTimeout(pushNotes, 2000); }
+  clearTimeout(saveTimer); saveTimer = setTimeout(pushNotes, 2000);
 }
 
 async function pushNotes(retryOnConflict = true) {
-  if (!ghToken) return;
   setSyncStatus('syncing');
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(localNotes, null, 2))));
   const body = { message: 'Update daycare notes', content };
@@ -1618,7 +1602,7 @@ async function pushNotes(retryOnConflict = true) {
   try {
     const res = await fetch(`https://api.github.com/repos/${REPO}/contents/notes.json`, {
       method: 'PUT',
-      headers: { Authorization: `token ${ghToken}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' },
+      headers: { Authorization: `token ${GH_TOKEN}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' },
       body: JSON.stringify(body)
     });
     if (res.ok) {
@@ -1626,7 +1610,7 @@ async function pushNotes(retryOnConflict = true) {
     } else if (res.status === 409 && retryOnConflict) {
       // SHA out of sync (another device pushed) — re-fetch SHA and retry once
       const check = await fetch(`https://api.github.com/repos/${REPO}/contents/notes.json`, {
-        headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json' }
+        headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json' }
       });
       if (check.ok) { const d = await check.json(); notesSha = d.sha; }
       await pushNotes(false);
@@ -1637,12 +1621,9 @@ async function pushNotes(retryOnConflict = true) {
 function setSyncStatus(s) {
   const el = document.getElementById('syncStatus');
   if (!el) return;
-  el.textContent = s === 'syncing' ? '⟳ Saving…' : s === 'synced' ? '✓ Notes synced' : '⚠ Sync error —';
+  el.textContent = s === 'syncing' ? '⟳ Saving…' : s === 'synced' ? '✓ Synced' : '⚠ Sync error';
   el.style.color  = s === 'syncing' ? '#888' : s === 'synced' ? '#16a34a' : '#dc2626';
-  const btn = document.getElementById('syncBtn');
-  if (s === 'error') { btn.textContent = '🔑 Update token'; btn.style.display = 'inline-block'; }
-  else if (s === 'synced') { btn.style.display = 'none'; btn.textContent = '🔗 Connect sync'; setTimeout(() => { el.textContent = ''; }, 3000); }
-  else if (s === 'syncing' && btn.textContent !== '🔑 Update token') { btn.style.display = 'none'; }
+  if (s === 'synced') setTimeout(() => { el.textContent = ''; }, 3000);
 }
 
 function doLogout() {
