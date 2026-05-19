@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Santa Clara Daycare Database</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; background: #f0f2f5; color: #1a1a2e; }
+  h1 { padding: 14px 16px 2px; font-size: 20px; color: #1a1a2e; }
+  .subtitle { padding: 0 16px 8px; color: #666; font-size: 12px; line-height: 1.5; }
+  /* Controls */
+  .controls { display: flex; gap: 8px; padding: 8px 16px 12px; align-items: center; flex-wrap: wrap; }
+  .controls input { padding: 8px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; flex: 1; min-width: 180px; }
+  .controls select { padding: 7px 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 12px; background: #fff; }
+  .controls label { font-size: 12px; color: #555; display: flex; align-items: center; gap: 4px; }
+  .count { font-size: 11px; color: #888; width: 100%; }
+  /* Legend */
+  .legend { display: flex; gap: 10px; padding: 4px 16px 10px; flex-wrap: wrap; font-size: 11px; color: #555; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 4px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+  /* Card grid */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; padding: 0 16px 48px; }
+  .card { background: #fff; border-radius: 12px; box-shadow: 0 1px 6px rgba(0,0,0,0.09); overflow: hidden; border-top: 4px solid #d1d5db; }
+  .card.top    { border-top-color: #22c55e; }
+  .card.good   { border-top-color: #86efac; }
+  .card.ok     { border-top-color: #fbbf24; }
+  .card.low    { border-top-color: #d1d5db; }
+  .card.excluded { border-top-color: #ef4444; background: #fff5f5; }
+  .card.verify { border-top-color: #f59e0b; background: #fffbf0; }
+  .card.closed { border-top-color: #9ca3af; background: #f5f5f5; }
+  /* Card sections */
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 14px 6px; gap: 10px; }
+  .card-name { font-size: 14px; font-weight: 700; color: #1a1a2e; flex: 1; line-height: 1.35; }
+  .card-badges { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 14px 8px; }
+  .card-contact { display: flex; flex-direction: column; gap: 6px; padding: 8px 14px; border-top: 1px solid #f0f0f0; font-size: 12px; }
+  .card-contact a { color: #1d4ed8; text-decoration: none; }
+  .card-contact a:hover { text-decoration: underline; }
+  .card-contact span { color: #555; }
+  .card-hl { padding: 10px 14px; border-top: 1px solid #f0f0f0; }
+  .card-pos { font-size: 11px; color: #15803d; line-height: 1.55; }
+  .card-neg { font-size: 11px; color: #dc2626; line-height: 1.55; margin-top: 6px; }
+  details.card-details { border-top: 1px solid #f0f0f0; }
+  details.card-details > summary { font-size: 11px; font-weight: 600; color: #6b7280; padding: 8px 14px; cursor: pointer; list-style: none; user-select: none; }
+  details.card-details > summary::-webkit-details-marker { display: none; }
+  details.card-details > summary::before { content: '▶  '; font-size: 9px; }
+  details[open].card-details > summary::before { content: '▼  '; }
+  details.card-details > summary:hover { color: #374151; background: #f9fafb; }
+  .card-details-body { padding: 6px 14px 12px; }
+  .card-scores { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0 6px; }
+  .card-score-item { display: flex; align-items: center; gap: 3px; font-size: 10px; color: #6b7280; }
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .badge-contact1 { background: #dcfce7; color: #15803d; }
+  .badge-contact2 { background: #dbeafe; color: #1d4ed8; }
+  .badge-contact3 { background: #ede9fe; color: #7c3aed; }
+  .badge-verify   { background: #fef9c3; color: #854d0e; }
+  .badge-exclude  { background: #fee2e2; color: #991b1b; }
+  .badge-monitor  { background: #f3f4f6; color: #374151; }
+  .type-badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; background: #e0e7ff; color: #3730a3; font-weight: 500; }
+  .type-home      { background: #fef3c7; color: #92400e; }
+  .type-montessori{ background: #d1fae5; color: #065f46; }
+  .type-bilingual { background: #fce7f3; color: #9d174d; }
+  .type-center    { background: #dbeafe; color: #1e40af; }
+  .type-coopscusd { background: #f3f4f6; color: #374151; }
+  /* Scores */
+  .score { display: inline-block; width: 22px; height: 18px; line-height: 18px; text-align: center; border-radius: 3px; font-weight: 700; font-size: 11px; }
+  .s5 { background: #16a34a; color: #fff; }
+  .s4 { background: #84cc16; color: #fff; }
+  .s3 { background: #f59e0b; color: #fff; }
+  .s2 { background: #f97316; color: #fff; }
+  .s1 { background: #dc2626; color: #fff; }
+  .s0 { background: #e5e7eb; color: #9ca3af; font-weight: 400; }
+  .total-score { font-size: 20px; font-weight: 800; white-space: nowrap; }
+  .total-high { color: #15803d; }
+  .total-good { color: #65a30d; }
+  .total-ok   { color: #d97706; }
+  .total-low  { color: #dc2626; }
+  .cat-a { background: #dcfce7; color: #15803d; padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+  .cat-b { background: #dbeafe; color: #1d4ed8; padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+  .cat-c { background: #fee2e2; color: #991b1b; padding: 1px 5px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+  .violation-flag { color: #dc2626; font-weight: 700; }
+  .violation-ok   { color: #16a34a; font-weight: 600; }
+  a { color: #3b82f6; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .hidden { display: none !important; }
+  .na { color: #bbb; font-style: italic; font-size: 11px; }
+  .src-links { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 0 2px; }
+  .src-links a { display: inline-block; padding: 2px 7px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; color: #374151 !important; white-space: nowrap; font-size: 10px; text-decoration: none !important; }
+  .src-links a:hover { background: #dbeafe; color: #1e40af !important; border-color: #93c5fd; }
+  @media (max-width: 500px) {
+    .card-grid { grid-template-columns: 1fr; gap: 10px; padding: 0 10px 36px; }
+    h1 { font-size: 17px; }
+    .controls input { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<h1>Santa Clara Daycare Database</h1>
+<p class="subtitle">Research date: May 2026 &nbsp;|&nbsp; Reference point: Rosita Ave, Santa Clara, CA 95050 &nbsp;|&nbsp; Child: ~18–20 months, starting Nov 2026 / Jan 2027</p>
+
+<div class="legend">
+  <strong>Legend:</strong>
+  <span class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> Score ≥4.2 (Top tier)</span>
+  <span class="legend-item"><span class="legend-dot" style="background:#86efac"></span> Score 3.7–4.2</span>
+  <span class="legend-item"><span class="legend-dot" style="background:#fbbf24"></span> Score &lt;3.7</span>
+  <span class="legend-item"><span class="legend-dot" style="background:#fca5a5"></span> Excluded</span>
+  <span class="legend-item"><span class="legend-dot" style="background:#fde68a"></span> Verify first</span>
+  &nbsp;|&nbsp;
+  <span class="cat-a">A</span> ≤10 min from home &nbsp;
+  <span class="cat-b">B</span> 10–20 min &nbsp;
+  <span class="cat-c">C</span> &gt;20 min
+</div>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="🔍  Search name, address, notes…" oninput="filterTable()">
+  <select id="sortBy" onchange="renderTable()">
+    <option value="total">Sort: Best Score</option>
+    <option value="dist">Sort: Closest First</option>
+    <option value="name">Sort: Name A–Z</option>
+  </select>
+  <select id="filterType" onchange="filterTable()">
+    <option value="">All Types</option>
+    <option value="home">Home-based</option>
+    <option value="center">Center</option>
+    <option value="montessori">Montessori</option>
+    <option value="bilingual">Bilingual</option>
+  </select>
+  <select id="filterCat" onchange="filterTable()">
+    <option value="">All Categories</option>
+    <option value="A">Cat A — ≤10 min</option>
+    <option value="B">Cat B — 10–20 min</option>
+    <option value="C">Cat C — &gt;20 min</option>
+  </select>
+  <select id="filterAction" onchange="filterTable()">
+    <option value="">All Actions</option>
+    <option value="contact first">Contact First</option>
+    <option value="contact second">Contact Second</option>
+    <option value="contact third">Contact Third</option>
+    <option value="verify">Verify</option>
+    <option value="exclude">Exclude</option>
+  </select>
+  <label><input type="checkbox" id="hideExcluded" onchange="filterTable()"> Hide excluded</label>
+  <span class="count" id="rowCount"></span>
+</div>
+
+<div id="cardGrid" class="card-grid"></div>
+
+<script>
+const daycares = [
+  // ── TIER 1 ─────────────────────────────────────────────────────────────────
+  {
+    name:"My Second Home Daycare", action:"Contact First",
+    type:"Home / Bilingual", typeTag:"home bilingual",
+    address:"540 Scott Blvd", zip:"95050", phone:"(408) 248-6968",
+    website:"mysecondhomedaycare.com", websiteUrl:"https://mysecondhomedaycare.com",
+    ages:"1–4 yr", hours:"M–F 7:30am–5:30pm",
+    cat:"A", dist:"~1.5 mi", drive:"~5 min",
+    commute:"✅ Yes (Scott Blvd)", wfh:"Excellent",
+    langs:"English + Spanish", meals:"Yes (home-cooked B/L/S)", outdoor:"Yes",
+    license:"Verify on CCLD", violations:"0", grade:"A", keyViol:"None",
+    yelp:"5.0", yelpN:"12", otherRating:"5.0 Google (4 reviews)",
+    sentiment:"Strongly Positive",
+    pos:"Perfect 5.0 across ALL platforms (16 reviews); bilingual; home-cooked meals; individualized attention; \"very clean, safe, loving\"",
+    neg:"Closes 5:30pm — may not suit late workers",
+    s:4, r:5, c:5, cv:5, t:5, co:4, l:3, cost:4, av:3,
+    total:4.44, conf:"High", rowClass:"top"
+  },
+  {
+    name:"Building Blocks Daycare (Belma)", action:"Contact First",
+    type:"Home", typeTag:"home",
+    address:"1367 Block Dr", zip:"95050", phone:"Via Yelp",
+    website:"Yelp / daycare.com", websiteUrl:"",
+    ages:"0–4 yr", hours:"Verify",
+    cat:"A", dist:"~2 mi", drive:"~6 min",
+    commute:"Near (95050)", wfh:"Excellent",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify on CCLD", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"5.0", yelpN:"29 (693 photos)", otherRating:"—",
+    sentiment:"Strongly Positive",
+    pos:"5.0 Yelp; 693 photos (most documented home daycare found); 20-mo onboarding praised; social/language/motor play focus",
+    neg:"None surfaced",
+    s:4, r:5, c:5, cv:5, t:5, co:5, l:2, cost:4, av:3,
+    total:4.44, conf:"High", rowClass:"top"
+  },
+  {
+    name:"Dreamtree Daycare (Karen & Raena)", action:"Contact First",
+    type:"Home", typeTag:"home",
+    address:"1740 Franck Ave", zip:"95051", phone:"Via Yelp / Care.com",
+    website:"Yelp listing", websiteUrl:"",
+    ages:"12–48 mo", hours:"M–F 7:00am–6:00pm",
+    cat:"A", dist:"~3 mi", drive:"~8 min",
+    commute:"Near San Tomas corridor", wfh:"Easy",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify on CCLD", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Strongly +", yelpN:"49 (highest home daycare)", otherRating:"Care.com listed",
+    sentiment:"Strongly Positive",
+    pos:"49 Yelp reviews — highest review count for any home daycare found; \"treated like own grand babies\"; clean, bright, smooth transitions",
+    neg:"None surfaced",
+    s:4, r:5, c:5, cv:4, t:5, co:4, l:2, cost:4, av:3,
+    total:4.24, conf:"High", rowClass:"top"
+  },
+  {
+    name:"Children's World Bilingual Montessori (CWBM)", action:"Contact First — verify 18-mo",
+    type:"Montessori / Bilingual", typeTag:"montessori bilingual",
+    address:"820 Kiely Blvd", zip:"95051", phone:"(408) 247-8600",
+    website:"cwbmontessori.org", websiteUrl:"https://cwbmontessori.org",
+    ages:"2 yr+ (21 mo confirmed in review)", hours:"Verify",
+    cat:"B", dist:"~3.5 mi", drive:"~10–12 min",
+    commute:"No", wfh:"Easy–Comfortable",
+    langs:"English + Mandarin", meals:"Verify", outdoor:"Yes",
+    license:"Verify on CCLD", violations:"0", grade:"A", keyViol:"None — clean record",
+    yelp:"Strongly +", yelpN:"23", otherRating:"AMI/USA Accredited",
+    sentiment:"Extremely Positive",
+    pos:"Strongest testimonials found anywhere; AMI accredited; 0 violations; \"brand new materials, deep cleaned weekly\"; 21-mo start confirmed; multiple families sent 2–3 children",
+    neg:"⚠️ Listed min age 2 yr — call immediately to verify 18-mo; likely high cost; likely waitlist",
+    s:5, r:5, c:5, cv:3, t:3, co:4, l:5, cost:3, av:3,
+    total:4.19, conf:"High", rowClass:"top"
+  },
+  {
+    name:"Santa Clara Montessori — El Camino", action:"Contact First",
+    type:"Montessori", typeTag:"montessori",
+    address:"1041 El Camino Real", zip:"95050", phone:"(408) 508-8057",
+    website:"santaclaramontessori.com", websiteUrl:"https://santaclaramontessori.com",
+    ages:"18 mo+", hours:"M–F 8:30am–5:30pm",
+    cat:"A", dist:"~2 mi", drive:"~6 min",
+    commute:"✅ Yes (ECR @ San Tomas)", wfh:"Excellent",
+    langs:"English", meals:"Lunch program", outdoor:"Verify",
+    license:"Verify ECR location specifically", violations:"Grade B at Thomas Rd; verify ECR", grade:"B (verify)", keyViol:"None for ECR location confirmed",
+    yelp:"4.5", yelpN:"67", otherRating:"ThreeBestRated 4.5",
+    sentiment:"Strongly Positive",
+    pos:"18-mo minimum confirmed; 20-mo start praised; Ms. Katie \"incredibly nurturing\"; settled in 2 weeks; lunch program; afterschool bus from 13 schools",
+    neg:"5:30pm close; verify ECR CCL separately from Thomas Rd location",
+    s:3, r:5, c:5, cv:5, t:5, co:4, l:2, cost:3, av:3,
+    total:4.14, conf:"High", rowClass:"top"
+  },
+  {
+    name:"Santa Clara Sunshine (Raniji)", action:"Contact Second",
+    type:"Home", typeTag:"home",
+    address:"457 Greenwood Dr", zip:"95054", phone:"Via website",
+    website:"santaclarasunshinedaycare.com", websiteUrl:"https://www.santaclarasunshinedaycare.com",
+    ages:"12 mo+", hours:"Verify",
+    cat:"B", dist:"~4–5 mi", drive:"~12–14 min",
+    commute:"✅ Near 101/Old Ironsides (3 min to 101)", wfh:"Comfortable",
+    langs:"English", meals:"Yes (milk, lunch, snacks, fruits)", outdoor:"Yes (big backyard)",
+    license:"Verify on CCLD", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Strongly +", yelpN:"37", otherRating:"Wonderschool listed",
+    sentiment:"Strongly Positive",
+    pos:"18-mo cited specifically; big backyard; gardening, painting, cooking activities; Raniji \"kind, warm, caring\"; kids calm and happy at pickup",
+    neg:"None surfaced",
+    s:4, r:5, c:5, cv:3, t:5, co:4, l:2, cost:4, av:3,
+    total:4.09, conf:"High", rowClass:"top"
+  },
+  {
+    name:"Action Day Schools — Pruneridge", action:"Contact Second",
+    type:"Center", typeTag:"center bilingual",
+    address:"2001 Pruneridge Ave", zip:"95050", phone:"(650) 663-5004",
+    website:"actiondayschools.com", websiteUrl:"https://www.actiondayschools.com/locations/pruneridge-private-school-santaclara-california/",
+    ages:"Infant – TK (18 mo toddler program)", hours:"M–F 7:00am–6:00pm",
+    cat:"A", dist:"~2.5 mi", drive:"~7–9 min",
+    commute:"Near (95050, ECR area)", wfh:"Easy",
+    langs:"English + Spanish (staff)", meals:"Available", outdoor:"Yes (large)",
+    license:"430700961", violations:"5", grade:"B", keyViol:"2 Type B Nov 2019 (~7 yrs ago)",
+    yelp:"Strongly +", yelpN:"46", otherRating:"—",
+    sentiment:"Strongly Positive",
+    pos:"Est. 1968 — longest-running in area; STEAM curriculum; intimate campus (converted residences); Miss Rosario bilingual; \"kids started at 1.5 yrs — highly recommend\"",
+    neg:"None in reviews; 5 violations but all old (2019)",
+    s:3, r:5, c:5, cv:4, t:4, co:4, l:3, cost:4, av:3,
+    total:3.99, conf:"High", rowClass:"good"
+  },
+  {
+    name:"Kidsville Preschool & Daycare", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"1247 Benton St", zip:"95050", phone:"(408) 296-7442",
+    website:"kidsvillepreschool.com", websiteUrl:"https://kidsvillepreschool.com",
+    ages:"18 mo – 5 yr", hours:"M–F 6:30am–6:00pm",
+    cat:"A", dist:"~2 mi", drive:"~7 min",
+    commute:"Near (95050)", wfh:"Excellent",
+    langs:"English", meals:"Verify", outdoor:"Yes",
+    license:"Verify", violations:"3", grade:"A", keyViol:"None serious",
+    yelp:"Positive", yelpN:"31", otherRating:"Winnie listed",
+    sentiment:"Positive",
+    pos:"Est. 1970 (55 years — exceptional stability); 6:30am open (earliest in area); 18 mo confirmed; Miss Saleha + Miss Marcella praised",
+    neg:"None surfaced",
+    s:4, r:4, c:4, cv:5, t:5, co:3, l:2, cost:4, av:3,
+    total:3.88, conf:"Medium-High", rowClass:"good"
+  },
+  {
+    name:"KinderCare Santa Clara", action:"Contact Second",
+    type:"Center", typeTag:"center",
+    address:"840 Bing Dr", zip:"95051", phone:"(408) 246-2141",
+    website:"kindercare.com", websiteUrl:"https://www.kindercare.com/our-centers/santa-clara/ca/300460",
+    ages:"6 wk – 12 yr", hours:"M–F 7:00am–6:00pm",
+    cat:"B", dist:"~3.5 mi", drive:"~10–12 min",
+    commute:"No (near Lawrence Expy)", wfh:"Easy–Comfortable",
+    langs:"English", meals:"Yes", outdoor:"Yes (locked fenced)",
+    license:"Verify on CCLD", violations:"Verify", grade:"A (NAEYC)", keyViol:"None found",
+    yelp:"Strongly +", yelpN:"81", otherRating:"ThreeBestRated 4.6",
+    sentiment:"Strongly Positive",
+    pos:"81 Yelp reviews; NAEYC accredited; coded entry + locked fenced playground; Teaching Strategies GOLD; one teacher 20+ yr tenure; \"very excellent, professional and kind\"",
+    neg:"Corporate chain; higher cost; less personalized than home daycare",
+    s:4, r:5, c:4, cv:3, t:5, co:4, l:2, cost:2, av:4,
+    total:3.87, conf:"High", rowClass:"good"
+  },
+  {
+    name:"Happy Days Child Dev. Center", action:"Contact Second",
+    type:"Center", typeTag:"center",
+    address:"220 Blake Ave Suite C", zip:"95051", phone:"(408) 296-5770",
+    website:"happydayscdc.com", websiteUrl:"https://www.happydayscdc.com",
+    ages:"Infant – Kindergarten", hours:"M–F 8:00am–6:00pm",
+    cat:"B", dist:"~3.5 mi", drive:"~10–12 min",
+    commute:"No", wfh:"Easy–Comfortable",
+    langs:"English", meals:"Verify", outdoor:"Yes (indoor/outdoor covered; age-divided)",
+    license:"Verify", violations:"7", grade:"A", keyViol:"⚠️ 7 violations with A grade — verify on CCLD",
+    yelp:"Positive", yelpN:"77 (highest center count)", otherRating:"—",
+    sentiment:"Positive",
+    pos:"LIVE classroom cameras for parents; 77 Yelp reviews; STEM; Dr. Mendoza praised; \"loving teachers, safe, secure, fun\"",
+    neg:"7 violations despite A grade — discrepancy; verify on CCLD before touring",
+    s:3, r:5, c:4, cv:3, t:5, co:5, l:2, cost:3, av:3,
+    total:3.74, conf:"High", rowClass:"good"
+  },
+  {
+    name:"Tulip Kids Academy — El Camino", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"2280 El Camino Real", zip:"95050", phone:"(669) 377-5774",
+    website:"tulipkidsinc.com", websiteUrl:"https://www.tulipkidsinc.com",
+    ages:"12 mo – 5 yr", hours:"M–F 8:00am–6:00pm",
+    cat:"A", dist:"~2 mi", drive:"~5–7 min",
+    commute:"✅ Yes (ECR on commute)", wfh:"Excellent",
+    langs:"English", meals:"Yes", outdoor:"Yes",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Strongly +", yelpN:"11 SC; 63–92 at Sunnyvale locations",  otherRating:"NAEYC (Lawrence Station)",
+    sentiment:"Strongly Positive",
+    pos:"\"Genuinely happy each morning\"; \"significant growth socially, emotionally, academically\"; ASL-proficient staff; 12 mo+; Sunnyvale brand well-established",
+    neg:"SC location newer / fewer reviews; verify CCL for SC location",
+    s:3, r:4, c:4, cv:5, t:5, co:4, l:2, cost:3, av:3,
+    total:3.74, conf:"Medium-High", rowClass:"good"
+  },
+  {
+    name:"Happy Scholars / Little Scholars (Bilingual)", action:"Contact Second",
+    type:"Center / Bilingual", typeTag:"center bilingual",
+    address:"2091 Briarwood Dr", zip:"95051", phone:"(408) 517-1090",
+    website:"scholarsdaycare.org", websiteUrl:"https://scholarsdaycare.org",
+    ages:"~16 mo – 3.5 yr", hours:"M–F 8:30am–6:00pm",
+    cat:"B", dist:"~4 mi", drive:"~10–12 min",
+    commute:"No", wfh:"Easy",
+    langs:"Mandarin + English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Strongly +", yelpN:"25", otherRating:"Yahoo Local",
+    sentiment:"Strongly Positive",
+    pos:"16-mo start confirmed; Miss Joanna \"always my son's favorite teacher\"; both kids in family attended; Mandarin bilingual; small group",
+    neg:"None surfaced",
+    s:3, r:4, c:4, cv:3, t:5, co:4, l:5, cost:4, av:3,
+    total:3.69, conf:"Medium-High", rowClass:"good"
+  },
+  {
+    name:"Cabrillo Montessori (MSOSV)", action:"Contact Second",
+    type:"Montessori", typeTag:"montessori",
+    address:"2495 Cabrillo Ave", zip:"95051", phone:"(408) 418-3568",
+    website:"msosv.com", websiteUrl:"https://msosv.com",
+    ages:"18 mo – 6 yr", hours:"M–F 7:00am–6:00pm",
+    cat:"B", dist:"~4 mi", drive:"~10–12 min",
+    commute:"No", wfh:"Easy–Comfortable",
+    langs:"English", meals:"Verify", outdoor:"Yes (spacious)",
+    license:"Verify", violations:"0", grade:"A", keyViol:"None — clean record",
+    yelp:"Listed", yelpN:"—", otherRating:"—",
+    sentiment:"Positive",
+    pos:"0 violations; 18 mo confirmed; full Montessori; spacious classrooms; 7am open (flexible for commute)",
+    neg:"Limited review data surfaced in research",
+    s:5, r:3, c:4, cv:3, t:5, co:3, l:2, cost:3, av:3,
+    total:3.60, conf:"Medium", rowClass:"good"
+  },
+  {
+    name:"Santa Clara Joy Family Daycare (Xiangqin Hu)", action:"Contact Third",
+    type:"Home", typeTag:"home",
+    address:"95054 (verify via Wonderschool)", zip:"95054", phone:"Via Wonderschool / Nextdoor",
+    website:"Nextdoor / Wonderschool", websiteUrl:"",
+    ages:"5 mo+", hours:"Flexible (verify)",
+    cat:"B", dist:"~4–5 mi", drive:"~12–15 min",
+    commute:"Near 101 (95054)", wfh:"Comfortable",
+    langs:"English", meals:"Yes (organic fresh homemade)", outdoor:"Verify",
+    license:"434414245", violations:"0", grade:"A", keyViol:"None — clean record",
+    yelp:"—", yelpN:"—", otherRating:"Wonderschool/Care.com: Strongly Positive",
+    sentiment:"Strongly Positive",
+    pos:"3-year retention from 5 months old; daily reports (nap, food, diaper); regular photos/videos; organic food; flexible drop-off/pickup; \"significant progress\"",
+    neg:"Limited online presence; address needs verification",
+    s:5, r:3, c:5, cv:3, t:5, co:5, l:2, cost:4, av:3,
+    total:3.81, conf:"Medium", rowClass:"good"
+  },
+  // ── TIER 2 ─────────────────────────────────────────────────────────────────
+  {
+    name:"Mina Happy Daycare", action:"Contact Second",
+    type:"Home", typeTag:"home",
+    address:"Santa Clara (95051)", zip:"95051", phone:"(408) 368-9051",
+    website:"—", websiteUrl:"",
+    ages:"3 mo+", hours:"Verify",
+    cat:"B", dist:"~3–4 mi", drive:"~8–10 min",
+    commute:"Near San Tomas", wfh:"Easy",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Strongly +", yelpN:"20", otherRating:"Yahoo Local",
+    sentiment:"Strongly Positive",
+    pos:"1:4 ratio; 17-mo cited; 3-mo infant confirmed; multiple pre-start visits for transitions; \"loving place from day 1\"",
+    neg:"None surfaced",
+    s:3, r:4, c:5, cv:4, t:5, co:4, l:2, cost:4, av:3,
+    total:3.77, conf:"Medium", rowClass:"good"
+  },
+  {
+    name:"Twinkling Star Daycare (Neha Bansal)", action:"Contact Second",
+    type:"Home / Montessori-inspired", typeTag:"home montessori",
+    address:"794 Ridge Rd", zip:"95051", phone:"Via Yelp / twinklingstarchilddaycare.com",
+    website:"twinklingstarchilddaycare.com", websiteUrl:"",
+    ages:"~11 mo+", hours:"Verify",
+    cat:"B", dist:"~3–4 mi", drive:"~9–11 min",
+    commute:"Near", wfh:"Easy",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Positive", yelpN:"72 photos", otherRating:"Winnie / Nextdoor",
+    sentiment:"Positive",
+    pos:"11-mo start confirmed; 1-yr-old \"happy and thriving\"; Montessori-inspired; Ms. Neha \"loving and caring\"; \"home away from home\"",
+    neg:"None surfaced",
+    s:3, r:3, c:4, cv:4, t:5, co:3, l:2, cost:4, av:3,
+    total:3.37, conf:"Medium", rowClass:"ok"
+  },
+  {
+    name:"Hummingbird Kidz", action:"Contact Second",
+    type:"Home", typeTag:"home",
+    address:"1700 Triton Ct", zip:"95050", phone:"Via hummingbirdkidz.com",
+    website:"hummingbirdkidz.com", websiteUrl:"https://hummingbirdkidz.com",
+    ages:"6 mo – 5 yr", hours:"Verify",
+    cat:"A", dist:"~2 mi", drive:"~6–7 min",
+    commute:"Near (95050)", wfh:"Excellent",
+    langs:"English", meals:"Yes", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Positive", yelpN:"Listed", otherRating:"Nextdoor / Winnie",
+    sentiment:"Positive",
+    pos:"Shy daughter had \"smooth, hassle-free transition\"; \"extremely excited every morning\"; meals provided; 6 mo minimum",
+    neg:"None surfaced",
+    s:3, r:3, c:4, cv:5, t:4, co:3, l:2, cost:4, av:3,
+    total:3.37, conf:"Medium", rowClass:"ok"
+  },
+  {
+    name:"World of Dreams Learning Home", action:"Contact Second",
+    type:"Home", typeTag:"home",
+    address:"Santa Clara (verify via website)", zip:"Verify", phone:"Via worldofdreamsdaycare.com",
+    website:"worldofdreamsdaycare.com", websiteUrl:"https://worldofdreamsdaycare.com",
+    ages:"18 mo+ (confirmed)", hours:"Verify",
+    cat:"Verify", dist:"Verify", drive:"Verify",
+    commute:"Verify", wfh:"Verify",
+    langs:"English", meals:"Yes (organic)", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Positive", yelpN:"Listed", otherRating:"Winnie",
+    sentiment:"Positive",
+    pos:"\"18-month-old loves World of Dreams — as a first-time mom I was nervous but they made her feel right at home\"; organic meals; \"everyone knows the children\"",
+    neg:"Address not confirmed in research — verify location before pursuing",
+    s:3, r:3, c:4, cv:3, t:5, co:3, l:2, cost:4, av:3,
+    total:3.26, conf:"Medium-Low", rowClass:"ok"
+  },
+  {
+    name:"Building Kidz of Santa Clara", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"1500 Los Padres Blvd #110", zip:"95050", phone:"(408) 758-8804",
+    website:"buildingkidzschool.com", websiteUrl:"https://www.buildingkidzschool.com/schools/santa-clara/",
+    ages:"0 – 6 yr", hours:"M–F 8:00am–6:00pm",
+    cat:"A", dist:"~2 mi", drive:"~6 min",
+    commute:"Near (Los Padres near San Tomas)", wfh:"Excellent",
+    langs:"English", meals:"Yes (hot meals)", outdoor:"Yes",
+    license:"Verify", violations:"5", grade:"B", keyViol:"None specific found",
+    yelp:"Listed", yelpN:"—", otherRating:"—",
+    sentiment:"Neutral",
+    pos:"Music, dance, theater enrichment; hot meals; parent app; 0–6 yr; Los Padres Blvd (near Rosita Ave area)",
+    neg:"5 violations; limited parent reviews surfaced",
+    s:3, r:3, c:4, cv:5, t:5, co:4, l:2, cost:3, av:3,
+    total:3.43, conf:"Medium", rowClass:"ok"
+  },
+  {
+    name:"Sparklet Kids Academy", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"1570 Lafayette St", zip:"95050", phone:"(669) 230-6986",
+    website:"sparkletkids.com", websiteUrl:"https://sparkletkids.com",
+    ages:"6 wk – K", hours:"Verify",
+    cat:"A", dist:"~2 mi", drive:"~6 min",
+    commute:"Near (95050)", wfh:"Excellent",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"0", grade:"A", keyViol:"None — clean record",
+    yelp:"Positive", yelpN:"Listed", otherRating:"—",
+    sentiment:"Positive",
+    pos:"0 violations; infant/toddler/preschool; 6 wk minimum; near Lawrence Expy",
+    neg:"Limited reviews surfaced",
+    s:5, r:3, c:3, cv:5, t:4, co:3, l:2, cost:3, av:3,
+    total:3.44, conf:"Medium-Low", rowClass:"ok"
+  },
+  {
+    name:"Monticello Academy", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"3345 Lochinvar Ave / 3401 Monroe St", zip:"95051", phone:"(408) 615-9416",
+    website:"monticelloacademy.org", websiteUrl:"https://monticelloacademy.org",
+    ages:"2 – 5 yr", hours:"M–F 7:00am–6:00pm",
+    cat:"B", dist:"~3.5 mi", drive:"~9 min",
+    commute:"Near (Monroe/San Tomas)", wfh:"Easy",
+    langs:"English", meals:"Yes", outdoor:"Verify",
+    license:"434407588", violations:"0", grade:"A", keyViol:"None — 3 visits, 0 citations",
+    yelp:"Moderate", yelpN:"GreatSchools 3.7 (31)", otherRating:"CareLuLu listed",
+    sentiment:"Neutral",
+    pos:"0 violations; accepts children with special needs; meals included; Monroe/San Tomas location (near commute)",
+    neg:"2 yr minimum; GreatSchools 3.7 is moderate; limited review detail for daycare specifically",
+    s:5, r:3, c:3, cv:4, t:3, co:3, l:2, cost:3, av:3,
+    total:3.34, conf:"Medium", rowClass:"ok"
+  },
+  {
+    name:"Little Star Home Family Daycare", action:"Contact Third",
+    type:"Home / Montessori", typeTag:"home montessori",
+    address:"2417 S Park Ln", zip:"95051", phone:"(408) 260-2561",
+    website:"littlestarfamilydaycare.weebly.com", websiteUrl:"",
+    ages:"Infant – pre-K", hours:"M–F 8:00am–6:00pm",
+    cat:"A", dist:"~3 mi", drive:"~8 min",
+    commute:"Near (off Scott Blvd)", wfh:"Easy",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Mixed", yelpN:"21", otherRating:"Care.com",
+    sentiment:"Mixed",
+    pos:"Montessori philosophy; est. 11 yrs; daughters \"flourished\"; children learned self-care skills",
+    neg:"One review cited owner as \"unprofessional\" — only negative surfaced in research",
+    s:3, r:3, c:4, cv:4, t:4, co:3, l:2, cost:4, av:3,
+    total:3.32, conf:"Medium", rowClass:"ok"
+  },
+  {
+    name:"My Other Home Daycare", action:"Contact Third",
+    type:"Home / Bilingual", typeTag:"home bilingual",
+    address:"2366 Bray Ave", zip:"95050", phone:"(408) 752-6271",
+    website:"myotherhomedaycare.com", websiteUrl:"https://www.myotherhomedaycare.com",
+    ages:"18 mo – 3 yr (toddler)", hours:"Verify",
+    cat:"A", dist:"~2 mi", drive:"~6 min",
+    commute:"Near (95050)", wfh:"Excellent",
+    langs:"English + Spanish", meals:"Yes (Peruvian homemade)", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Positive", yelpN:"22", otherRating:"Winnie / TrustedCare",
+    sentiment:"Positive",
+    pos:"Latina/women-owned; est. 20+ years; Peruvian homemade meals; bilingual English/Spanish; structured routine; max 14 children",
+    neg:"Limited direct review quotes in research",
+    s:3, r:3, c:4, cv:5, t:5, co:3, l:3, cost:4, av:3,
+    total:3.54, conf:"Medium", rowClass:"ok"
+  },
+  {
+    name:"Vennila Kids Academy", action:"Contact Third (late-pickup priority)",
+    type:"Center", typeTag:"center",
+    address:"2108 Calabazas Blvd", zip:"95051", phone:"Via website",
+    website:"vennilakidsacademy.com", websiteUrl:"",
+    ages:"Infant – preschool", hours:"M–F 8:00am–7:30pm",
+    cat:"B", dist:"~4 mi", drive:"~10–12 min",
+    commute:"No", wfh:"Easy",
+    langs:"English", meals:"Verify", outdoor:"Yes",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Positive", yelpN:"Listed", otherRating:"ThreeBestRated 4.6",
+    sentiment:"Positive",
+    pos:"7:30pm close — LATEST hours found in entire research; 3+ yr retention; \"tremendous progress in discipline and academics\"; computers/technology; summer camp",
+    neg:"Limited detailed review data",
+    s:3, r:3, c:4, cv:3, t:4, co:3, l:2, cost:3, av:3,
+    total:3.20, conf:"Medium-Low", rowClass:"ok"
+  },
+  {
+    name:"Bright Stars Daycare (Rashmi)", action:"Contact Third",
+    type:"Home", typeTag:"home",
+    address:"3475 Notre Dame Dr", zip:"95051", phone:"(408) 244-8373",
+    website:"brightstarsdaycare.com", websiteUrl:"",
+    ages:"Infant – preschool", hours:"M–F 8:00am–6:00pm",
+    cat:"B", dist:"~4 mi", drive:"~10 min",
+    commute:"No", wfh:"Easy",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Positive", yelpN:"10", otherRating:"BBB listed",
+    sentiment:"Positive",
+    pos:"Rashmi \"very strict — worked well for our family\"; good discipline; personal attention; large playroom",
+    neg:"\"Very strict\" style — may not suit all families; limited reviews",
+    s:3, r:3, c:3, cv:3, t:4, co:3, l:2, cost:4, av:3,
+    total:3.10, conf:"Medium-Low", rowClass:"ok"
+  },
+  {
+    name:"Tiny Seeds Bilingual Daycare", action:"Contact Third",
+    type:"Home / Bilingual", typeTag:"home bilingual",
+    address:"178 Cronin Dr (or 3125 Mauricia Ave)", zip:"95051", phone:"(669) 661-2018",
+    website:"tinyseedsbilingualdaycare.com", websiteUrl:"",
+    ages:"Verify", hours:"Verify",
+    cat:"B", dist:"~4 mi", drive:"~10 min",
+    commute:"Near (Stevens Creek/Lawrence)", wfh:"Easy",
+    langs:"Bilingual (verify language)", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Listed", yelpN:"Yahoo Local", otherRating:"—",
+    sentiment:"Neutral",
+    pos:"Bilingual; EC-certified teachers; near Lawrence Expy",
+    neg:"Address discrepancy in listings; limited reviews",
+    s:3, r:2, c:3, cv:3, t:3, co:3, l:4, cost:3, av:3,
+    total:3.00, conf:"Low", rowClass:"ok"
+  },
+  {
+    name:"SAN Family Daycare", action:"Contact Third",
+    type:"Home / Bilingual", typeTag:"home bilingual",
+    address:"2337 Vargas Place", zip:"95050", phone:"(408) 401-9431",
+    website:"carelulu.com listing", websiteUrl:"",
+    ages:"Verify", hours:"Verify",
+    cat:"A", dist:"~2 mi", drive:"~6 min",
+    commute:"Near (95050)", wfh:"Excellent",
+    langs:"Indian bilingual", meals:"Verify", outdoor:"Yes (large play area)",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"—", yelpN:"—", otherRating:"CareLuLu listed",
+    sentiment:"Neutral",
+    pos:"Licensed; smoke/pet-free; large play area; bilingual Indian provider; 95050 (near home)",
+    neg:"Very limited reviews",
+    s:3, r:2, c:3, cv:5, t:3, co:3, l:3, cost:3, av:3,
+    total:3.00, conf:"Low", rowClass:"ok"
+  },
+  {
+    name:"Kiddie Cove Bilingual Daycare", action:"Contact Third",
+    type:"Center / Bilingual", typeTag:"center bilingual",
+    address:"665 Argus Way", zip:"95054", phone:"Via kiddiecovecare.com",
+    website:"kiddiecovecare.com", websiteUrl:"https://kiddiecovecare.com",
+    ages:"Verify", hours:"M–F 8:30am–6:30pm",
+    cat:"B", dist:"~4 mi", drive:"~12 min",
+    commute:"Yes (95054/near 101)", wfh:"Comfortable",
+    langs:"Mandarin + English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Listed", yelpN:"—", otherRating:"—",
+    sentiment:"Neutral",
+    pos:"Mandarin+English bilingual; Chinese curriculum enrichment; near 101 for commute",
+    neg:"Limited reviews surfaced",
+    s:3, r:2, c:3, cv:3, t:3, co:3, l:4, cost:3, av:3,
+    total:2.99, conf:"Low", rowClass:"ok"
+  },
+  {
+    name:"Santa Clara Family Day Care (Leith Ave)", action:"Contact Third",
+    type:"Home / Bilingual", typeTag:"home bilingual",
+    address:"849 Leith Ave", zip:"95054", phone:"(408) 952-9662",
+    website:"—", websiteUrl:"",
+    ages:"Mixed", hours:"M–F 8:00am–6:00pm",
+    cat:"B", dist:"~5 mi", drive:"~13 min",
+    commute:"Near 101", wfh:"Comfortable",
+    langs:"Chinese + English", meals:"Yes (organic hot lunch)", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Positive", yelpN:"10", otherRating:"—",
+    sentiment:"Positive",
+    pos:"Bilingual Chinese+English; organic hot lunch; 10+ years established",
+    neg:"Limited reviews",
+    s:3, r:3, c:3, cv:3, t:3, co:3, l:4, cost:4, av:3,
+    total:3.10, conf:"Medium-Low", rowClass:"ok"
+  },
+  {
+    name:"My First Station Spanish Immersion", action:"Contact Third",
+    type:"Home / Bilingual", typeTag:"home bilingual",
+    address:"606 Giannini Dr", zip:"95051", phone:"(408) 595-1808",
+    website:"myfirststation.com", websiteUrl:"https://myfirststation.com",
+    ages:"Infant – 5 yr", hours:"M–F 7:30am–5:30pm",
+    cat:"B", dist:"~4 mi", drive:"~10 min",
+    commute:"No", wfh:"Easy",
+    langs:"Spanish Immersion", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Listed", yelpN:"—", otherRating:"—",
+    sentiment:"Positive",
+    pos:"Spanish immersion; infant accepted; near Apple Park / Lawrence Expy",
+    neg:"5:30pm close; limited reviews",
+    s:3, r:2, c:3, cv:3, t:4, co:3, l:5, cost:3, av:3,
+    total:3.04, conf:"Low", rowClass:"ok"
+  },
+  {
+    name:"Angel Christian Day Care", action:"Contact Third",
+    type:"Center / Bilingual", typeTag:"center bilingual",
+    address:"744 Orkney Ave", zip:"95054", phone:"(408) 207-8307",
+    website:"angelchristiandaycare.com", websiteUrl:"https://angelchristiandaycare.com",
+    ages:"~18 mo+", hours:"M–F 8:00am–6:00pm",
+    cat:"B", dist:"~4–5 mi", drive:"~13 min",
+    commute:"Yes (95054/near 101)", wfh:"Comfortable",
+    langs:"Chinese + English", meals:"Yes (organic hot lunches)", outdoor:"Verify",
+    license:"434414245", violations:"0", grade:"A", keyViol:"None — clean record",
+    yelp:"Listed", yelpN:"—", otherRating:"—",
+    sentiment:"Positive",
+    pos:"0 violations; bilingual Chinese+English; organic hot lunches; near 101 for commute",
+    neg:"Limited reviews surfaced",
+    s:5, r:3, c:4, cv:3, t:4, co:3, l:4, cost:3, av:3,
+    total:3.63, conf:"Medium-Low", rowClass:"ok"
+  },
+  {
+    name:"Anna's Daycare (Santa Clara)", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"4639 Snead Dr", zip:"95054", phone:"(408) 969-9930",
+    website:"annas-daycare.com", websiteUrl:"https://www.annas-daycare.com",
+    ages:"0 – 5 yr", hours:"M–F 7:30am–6:00pm",
+    cat:"B", dist:"~4–5 mi", drive:"~14 min",
+    commute:"Yes (near Old Ironsides/101)", wfh:"Comfortable",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Listed", yelpN:"—", otherRating:"—",
+    sentiment:"Neutral",
+    pos:"Est. 1990; 0–5 yr; near Levi's Stadium / 101 on-ramp; San Jose + Sunnyvale locations also",
+    neg:"Limited reviews for SC location specifically",
+    s:3, r:2, c:3, cv:3, t:4, co:3, l:2, cost:3, av:3,
+    total:2.97, conf:"Low", rowClass:"ok"
+  },
+  {
+    name:"Vidyarambh", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"2931 El Camino Real", zip:"95051", phone:"(408) 758-8192",
+    website:"vidyarambh.org", websiteUrl:"https://vidyarambh.org",
+    ages:"20 mo – TK", hours:"Verify",
+    cat:"B", dist:"~4 mi", drive:"~10 min",
+    commute:"Near (ECR corridor)", wfh:"Easy",
+    langs:"English (Indian cultural context)", meals:"Verify", outdoor:"Yes (large)",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Positive", yelpN:"—", otherRating:"—",
+    sentiment:"Positive",
+    pos:"7 classrooms; large play area; Indian childcare; also Cupertino campus; 20 mo minimum",
+    neg:"20 mo minimum — borderline for 18-mo start",
+    s:3, r:3, c:3, cv:4, t:4, co:3, l:2, cost:3, av:3,
+    total:3.15, conf:"Medium-Low", rowClass:"ok"
+  },
+  {
+    name:"Safari Kid — Santa Clara", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"4995 Stevens Creek Blvd", zip:"95051", phone:"(855) 695-6148",
+    website:"safarikid.com/santa-clara", websiteUrl:"https://safarikid.com/santa-clara",
+    ages:"Infant – elementary", hours:"M–F 8:30am–6:00pm",
+    cat:"B", dist:"~5 mi", drive:"~12 min",
+    commute:"No", wfh:"Comfortable",
+    langs:"English", meals:"Verify", outdoor:"Yes",
+    license:"Verify", violations:"0", grade:"A", keyViol:"None",
+    yelp:"Positive", yelpN:"15", otherRating:"—",
+    sentiment:"Positive",
+    pos:"0 violations; \"daughter very expressive within 20 days\"; colorful environment; curriculum praised",
+    neg:"Most reviews focus on preschool age; weaker fit confirmed for 18-mo toddler range",
+    s:4, r:3, c:3, cv:3, t:3, co:3, l:2, cost:3, av:3,
+    total:3.10, conf:"Medium", rowClass:"ok"
+  },
+  {
+    name:"Neighborhood Christian Center", action:"Contact Third",
+    type:"Center / Faith-based", typeTag:"center",
+    address:"887 Pomeroy Ave", zip:"95051", phone:"(408) 984-3418",
+    website:"myncc.net", websiteUrl:"https://www.myncc.net",
+    ages:"6 wk – 6 yr", hours:"M–F 7:30am–5:30pm",
+    cat:"B", dist:"~4 mi", drive:"~10 min",
+    commute:"No", wfh:"Easy",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"1", grade:"A", keyViol:"1 minor violation",
+    yelp:"Listed", yelpN:"—", otherRating:"—",
+    sentiment:"Neutral",
+    pos:"6 wk+; infant center + preschool; 1 violation (minor)",
+    neg:"Faith-based (may not suit all families); 5:30pm close",
+    s:4, r:2, c:3, cv:3, t:4, co:3, l:2, cost:3, av:3,
+    total:3.13, conf:"Low", rowClass:"ok"
+  },
+  {
+    name:"Manmeet Daycare & After School", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"445 Giannini Dr", zip:"95051", phone:"(408) 348-4847",
+    website:"manmeetdaycare.com", websiteUrl:"https://manmeetdaycare.com",
+    ages:"Infant – preschool", hours:"M–F 8:00am–5:00pm",
+    cat:"B", dist:"~4 mi", drive:"~10 min",
+    commute:"No", wfh:"Easy",
+    langs:"English (Indian-owned)", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Listed", yelpN:"—", otherRating:"—",
+    sentiment:"Neutral",
+    pos:"Indian-owned; infant program; near Apple Park area",
+    neg:"5:00pm close (earliest close found); limited reviews",
+    s:3, r:2, c:3, cv:3, t:4, co:2, l:2, cost:3, av:3,
+    total:2.91, conf:"Low", rowClass:"ok"
+  },
+  {
+    name:"Santa Clara Montessori — Thomas Rd", action:"Contact Third",
+    type:"Montessori", typeTag:"montessori",
+    address:"3700 Thomas Rd #107", zip:"95054", phone:"(408) 320-2091",
+    website:"santaclaramontessori.com", websiteUrl:"https://santaclaramontessori.com",
+    ages:"18 mo+", hours:"M–F 8:00am–6:00pm",
+    cat:"B", dist:"~5 mi", drive:"~14 min",
+    commute:"Yes (95054 near 101)", wfh:"Comfortable",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"5", grade:"B", keyViol:"Same brand as ECR; verify this location on CCLD",
+    yelp:"Strongly + (brand)", yelpN:"Same brand 67 at ECR", otherRating:"—",
+    sentiment:"Positive",
+    pos:"18 mo+ confirmed; Montessori; 8am open; near 101 commute path; second location of same brand",
+    neg:"Grade B, 5 violations; 14 min from home is acceptable but further than ECR",
+    s:3, r:4, c:4, cv:3, t:5, co:4, l:2, cost:3, av:3,
+    total:3.56, conf:"Medium", rowClass:"ok"
+  },
+  {
+    name:"Playful Otter's Daycare (Tiffany)", action:"Contact Third",
+    type:"Home", typeTag:"home",
+    address:"Santa Clara (verify via Care.com)", zip:"Verify", phone:"Via Care.com",
+    website:"Care.com listing", websiteUrl:"",
+    ages:"0 – 5 yr", hours:"Verify",
+    cat:"Verify", dist:"Verify", drive:"Verify",
+    commute:"Verify", wfh:"Verify",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"—", yelpN:"—", otherRating:"Care.com 5.0 (1 review)",
+    sentiment:"Strongly Positive",
+    pos:"Family been there 5+ years since oldest was 8 months; \"Tiffany is the baby whisper — special touch with infants\"; crafty; learns through play",
+    neg:"Only 1 review; address unverified — find via Care.com before pursuing",
+    s:3, r:3, c:5, cv:2, t:5, co:3, l:2, cost:3, av:3,
+    total:3.22, conf:"Low", rowClass:"ok"
+  },
+  {
+    name:"Krupa Patel's Daycare", action:"Contact Third",
+    type:"Home", typeTag:"home",
+    address:"851 Keith Ln", zip:"95054", phone:"(408) 239-9600",
+    website:"—", websiteUrl:"",
+    ages:"Toddlers", hours:"M–F 8:30am–5:30pm",
+    cat:"B", dist:"~5 mi", drive:"~13 min",
+    commute:"Near 101", wfh:"Comfortable",
+    langs:"English (Indian)", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Listed", yelpN:"—", otherRating:"childcarecenter.us",
+    sentiment:"Neutral",
+    pos:"15 years experience; near 101; toddler-focused",
+    neg:"5:30pm close; very limited reviews",
+    s:3, r:2, c:3, cv:3, t:4, co:2, l:2, cost:3, av:3,
+    total:2.87, conf:"Low", rowClass:"ok"
+  },
+  {
+    name:"Bracher Children's Center (SCUSD)", action:"Monitor",
+    type:"Center / SCUSD", typeTag:"center",
+    address:"2401 Bowers Ave", zip:"95051", phone:"(408) 423-1228",
+    website:"bracher.santaclarausd.org", websiteUrl:"",
+    ages:"24 mo – 4 yr 11 mo", hours:"Verify",
+    cat:"B", dist:"~4 mi", drive:"~10 min",
+    commute:"Near (Bowers Ave)", wfh:"Easy",
+    langs:"English", meals:"Verify", outdoor:"Yes (elementary school yard)",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"—", yelpN:"—", otherRating:"SCUSD",
+    sentiment:"Neutral",
+    pos:"Sliding scale fees; at Bracher Elementary; Bowers Ave (good WFH/commute balance); district quality oversight",
+    neg:"24-mo minimum; subsidy-focused; limited private enrollment info",
+    s:3, r:2, c:3, cv:4, t:3, co:2, l:2, cost:5, av:2,
+    total:2.97, conf:"Low", rowClass:"ok"
+  },
+  // ── SUNNYVALE / COMMUTE ROUTE ────────────────────────────────────────────────
+  {
+    name:"Sunnyvale KinderCare (Arques Ave)", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"1155 E Arques Ave", zip:"94085", phone:"(408) 245-3276",
+    website:"kindercare.com", websiteUrl:"https://www.kindercare.com",
+    ages:"6 wk – 6 yr", hours:"M–F 7:00am–6:30pm",
+    cat:"B", dist:"~7 mi", drive:"~16–18 min",
+    commute:"Yes (near 101/Arques)", wfh:"Borderline (16–18 min)",
+    langs:"English", meals:"Yes", outdoor:"Yes",
+    license:"Verify", violations:"6", grade:"B", keyViol:"None specific found",
+    yelp:"Listed", yelpN:"—", otherRating:"KinderCare brand",
+    sentiment:"Neutral",
+    pos:"7am–6:30pm; near 101 for commute drop-off; toddler 1–2 yr program; chain reliability",
+    neg:"Grade B; 6 violations; 16–18 min from home is borderline for WFH days",
+    s:3, r:3, c:3, cv:2, t:5, co:4, l:2, cost:2, av:4,
+    total:3.01, conf:"Medium", rowClass:"ok"
+  },
+  {
+    name:"Tulip Kids — Lawrence Station (Sunnyvale)", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"1279 Lawrence Station Rd", zip:"94089", phone:"(669) 255-0540",
+    website:"tulipkidsinc.com", websiteUrl:"https://www.tulipkidsinc.com",
+    ages:"12 mo – 5 yr", hours:"M–F 8:00am–6:00pm",
+    cat:"B", dist:"~6 mi", drive:"~15 min",
+    commute:"Yes (Lawrence Expy/101)", wfh:"Comfortable–Borderline",
+    langs:"English", meals:"Yes", outdoor:"Yes",
+    license:"Verify", violations:"Verify", grade:"A (NAEYC)", keyViol:"None found",
+    yelp:"Strongly + (brand)", yelpN:"Sunnyvale brand well-reviewed", otherRating:"NAEYC",
+    sentiment:"Strongly Positive",
+    pos:"NAEYC accredited; near Lawrence/101; 12 mo+; same brand as heavily reviewed Sunnyvale locations",
+    neg:"15 min from home — borderline for WFH days",
+    s:4, r:4, c:4, cv:2, t:5, co:4, l:2, cost:3, av:3,
+    total:3.55, conf:"Medium", rowClass:"ok"
+  },
+  {
+    name:"Bright Horizons — Sunnyvale", action:"Contact Third",
+    type:"Center", typeTag:"center",
+    address:"1010 Sunnyvale Saratoga Rd", zip:"94087", phone:"(669) 216-4384",
+    website:"brighthorizons.com", websiteUrl:"https://www.brighthorizons.com",
+    ages:"6 wk – 5 yr", hours:"M–F 8:00am–6:00pm",
+    cat:"B", dist:"~7 mi", drive:"~16–18 min",
+    commute:"Near 101 corridor", wfh:"Borderline",
+    langs:"English", meals:"Verify", outdoor:"Yes",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Positive", yelpN:"—", otherRating:"—",
+    sentiment:"Positive",
+    pos:"Toddler ratio 1:4; 16 mo – 2 yr 9 mo toddler program; professional chain; NAEYC brand",
+    neg:"16–18 min from home; borderline WFH; avoid Stevens Creek location (different facility — see Excluded)",
+    s:4, r:3, c:4, cv:2, t:5, co:4, l:2, cost:2, av:3,
+    total:3.29, conf:"Medium", rowClass:"ok"
+  },
+  // ── REDWOOD SHORES (Category C) ─────────────────────────────────────────────
+  {
+    name:"Shores KinderCare (Redwood Shores)", action:"Monitor — dad-only pickup",
+    type:"Center", typeTag:"center",
+    address:"1050 Twin Dolphin Dr", zip:"94065", phone:"(650) 594-1100",
+    website:"kindercare.com", websiteUrl:"https://www.kindercare.com",
+    ages:"6 wk – school age", hours:"M–F 7:00am–6:30pm",
+    cat:"C", dist:"~22 mi", drive:"~25–30 min (no traffic)",
+    commute:"Yes (Redwood Shores endpoint)", wfh:"Poor (25–30+ min from Rosita Ave)",
+    langs:"English", meals:"Yes", outdoor:"Yes",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"Listed", yelpN:"—", otherRating:"KinderCare brand",
+    sentiment:"Neutral",
+    pos:"At dad's workplace; 7am–6:30pm; professional chain; convenient for office-day dad pickup",
+    neg:"~22 mi / 25–30 min from Rosita Ave — WFH pickup highly impractical",
+    s:3, r:3, c:3, cv:1, t:5, co:4, l:2, cost:2, av:4,
+    total:2.72, conf:"Low", rowClass:"low"
+  },
+  {
+    name:"Bright Horizons — Redwood City", action:"Monitor — dad-only pickup",
+    type:"Center", typeTag:"center",
+    address:"403 Winslow St", zip:"94063", phone:"(650) 395-2917",
+    website:"brighthorizons.com", websiteUrl:"https://child-care-preschool.brighthorizons.com/ca/redwoodcity/redwoodcity",
+    ages:"6 wk – 5 yr", hours:"M–F 7:30am–5:30pm",
+    cat:"C", dist:"~22 mi", drive:"~25–30 min",
+    commute:"Near endpoint", wfh:"Poor",
+    langs:"English", meals:"Verify", outdoor:"Yes",
+    license:"Verify", violations:"Verify", grade:"A (NAEYC)", keyViol:"None found",
+    yelp:"Positive", yelpN:"—", otherRating:"NAEYC; est. 1993",
+    sentiment:"Positive",
+    pos:"NAEYC accredited; est. 1993; near Redwood City/101; convenient for dad on office days",
+    neg:"Too far for WFH pickup; 5:30pm close",
+    s:3, r:3, c:4, cv:1, t:4, co:4, l:2, cost:2, av:3,
+    total:2.72, conf:"Low", rowClass:"low"
+  },
+  // ── AGE MISMATCH (note for later) ───────────────────────────────────────────
+  {
+    name:"Bright Starz Preschool ⚠️ Age: 2 yr min", action:"Monitor — revisit at 24 mo",
+    type:"Center", typeTag:"center",
+    address:"810 Washington St", zip:"95050", phone:"(408) 564-0863",
+    website:"brightstarzpreschool.com", websiteUrl:"",
+    ages:"2–6 yr (NOT 18 mo)", hours:"M–F 7:00am–6:00pm",
+    cat:"A", dist:"~2 mi", drive:"~6 min",
+    commute:"Near (95050)", wfh:"Excellent",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"434412709", violations:"0", grade:"A", keyViol:"None — 9 visits, 0 citations",
+    yelp:"Positive", yelpN:"21", otherRating:"Care.com 5.0",
+    sentiment:"Positive",
+    pos:"0 violations (clean); Annie Navarro 20+ yrs; all 3 kids in one family attended; Care.com 5.0",
+    neg:"⚠️ MINIMUM 2 YEARS — not suitable for 18-month-old. Add to list for 24 months.",
+    s:5, r:4, c:4, cv:5, t:1, co:3, l:2, cost:4, av:3,
+    total:0, conf:"High", rowClass:"ok"
+  },
+  {
+    name:"Amazing Stars Montessori ⚠️ Age: 2 yr min", action:"Monitor — revisit at 24 mo",
+    type:"Montessori", typeTag:"montessori",
+    address:"5041 Stevens Creek Blvd", zip:"95051", phone:"Verify",
+    website:"Verify", websiteUrl:"",
+    ages:"2–6 yr (NOT 18 mo)", hours:"M–F 8:00am–6:00pm",
+    cat:"B", dist:"~5 mi", drive:"~12 min",
+    commute:"No", wfh:"Comfortable",
+    langs:"English", meals:"Peanut/tree-nut free", outdoor:"Yes",
+    license:"Verify", violations:"0", grade:"A", keyViol:"None — clean record",
+    yelp:"Positive", yelpN:"33", otherRating:"—",
+    sentiment:"Positive",
+    pos:"0 violations; 1:6 ratio with 2 teachers; Ms. Senya praised; cultural celebration; year-round",
+    neg:"⚠️ MINIMUM 2 YEARS — not suitable for 18-month-old. Note for 24 months.",
+    s:5, r:4, c:4, cv:3, t:1, co:3, l:2, cost:3, av:3,
+    total:0, conf:"High", rowClass:"ok"
+  },
+  {
+    name:"Santa Clara Parents Nursery School ⚠️ Co-op", action:"Exclude — co-op + hours",
+    type:"Co-op Preschool", typeTag:"coopscusd",
+    address:"471 Monroe St", zip:"95050", phone:"(408) 248-5131",
+    website:"scpns.org", websiteUrl:"",
+    ages:"2–4 yr; 9am–3pm only", hours:"M–F 9:00am–3:00pm",
+    cat:"A", dist:"~2 mi", drive:"~6 min",
+    commute:"Near", wfh:"—",
+    langs:"English", meals:"Snacks", outdoor:"Verify",
+    license:"Verify", violations:"0", grade:"A", keyViol:"None",
+    yelp:"Positive", yelpN:"—", otherRating:"—",
+    sentiment:"Positive",
+    pos:"0 violations; play-based; Monroe St (great location)",
+    neg:"⚠️ CO-OP — parent participation REQUIRED; 9am–3pm only — not practical for two working parents",
+    s:0, r:0, c:0, cv:0, t:0, co:0, l:0, cost:0, av:0,
+    total:0, conf:"High", rowClass:"ok"
+  },
+  // ── VERIFY FIRST ────────────────────────────────────────────────────────────
+  {
+    name:"L'Academy Language Immersion ⚠️ Verify CCL", action:"Verify violations first",
+    type:"Center / Trilingual", typeTag:"center bilingual",
+    address:"351 Saratoga Ave", zip:"95050", phone:"(408) 718-1459",
+    website:"lacademyschools.com", websiteUrl:"https://lacademyschools.com/santa-clara-preschool-infant-daycare/",
+    ages:"5 mo – 5 yr", hours:"M–F 8:00am–5:30pm",
+    cat:"A", dist:"~2 mi", drive:"~7 min",
+    commute:"Near (95050)", wfh:"Excellent",
+    langs:"Mandarin + English + Spanish (trilingual)", meals:"Yes", outdoor:"Verify",
+    license:"434416366", violations:"12", grade:"B", keyViol:"⚠️ 2 Type B Mar 2024: room temp too low + staff compliance failure (RECENT)",
+    yelp:"Strongly +", yelpN:"Listed", otherRating:"Nextdoor + Daycare.com",
+    sentiment:"Strongly Positive",
+    pos:"Trilingual (3 languages — only one found in area); 5 mo+; \"only preschool offering 3 languages\"; smaller class sizes; healthy lunches; strongly positive parent reviews",
+    neg:"⚠️ 12 violations; 2 Type B in March 2024 (RECENT) — must verify resolution on CCLD before touring",
+    s:2, r:4, c:4, cv:4, t:5, co:4, l:5, cost:3, av:3,
+    total:3.38, conf:"Medium — verify CCL", rowClass:"verify"
+  },
+  {
+    name:"Chavez, Jenny (Family Daycare) ⚠️ 15 violations", action:"Verify — read CCLD reports",
+    type:"Home / Bilingual", typeTag:"home bilingual",
+    address:"95050 (verify address via CCLD)", zip:"95050", phone:"Via CCLD",
+    website:"—", websiteUrl:"",
+    ages:"Toddlers", hours:"Verify",
+    cat:"A", dist:"Verify", drive:"Verify",
+    commute:"Near (95050)", wfh:"Verify",
+    langs:"English + Spanish", meals:"Yes", outdoor:"Yes (big backyard)",
+    license:"434414612", violations:"15", grade:"C", keyViol:"⚠️ HIGHEST in ZIP 95050 — 6 Type B across 3 inspections (2018–2021)",
+    yelp:"—", yelpN:"—", otherRating:"Nextdoor positive anecdote",
+    sentiment:"Limited positive",
+    pos:"Bilingual; big backyard; activities; 3 kids attended long-term (Nextdoor anecdote)",
+    neg:"⚠️ 15 violations — highest in 95050; 6 Type B across 3 inspections; Grade C. Read full CCLD reports before any contact.",
+    s:1, r:2, c:3, cv:4, t:3, co:2, l:3, cost:4, av:3,
+    total:2.22, conf:"Medium — CCL confirmed", rowClass:"verify"
+  },
+  {
+    name:"Mission College CDC ⚠️ Conflicting data", action:"Verify CCLD data first",
+    type:"Center / College-run", typeTag:"center",
+    address:"3000 Mission College Blvd", zip:"95054", phone:"(408) 855-5177",
+    website:"missioncollege.edu", websiteUrl:"",
+    ages:"6 wk – 5 yr", hours:"M–F 7:30am–6:00pm",
+    cat:"B", dist:"~6 mi", drive:"~15 min",
+    commute:"Near 101", wfh:"Comfortable–Borderline",
+    langs:"English", meals:"Verify", outdoor:"Yes",
+    license:"430703796", violations:"0 (childcarecenter.us) vs 11 (DaycareGrades)", grade:"⚠️ Discrepancy (Ungraded vs D)", keyViol:"⚠️ DATA CONFLICT — verify on CCLD with license #430703796",
+    yelp:"Listed", yelpN:"—", otherRating:"NAEYC accredited",
+    sentiment:"Neutral",
+    pos:"NAEYC accredited; subsidized care available; college-run professional oversight; est. 1995",
+    neg:"⚠️ Conflicting violation data (0 vs 11) — MUST verify on CCLD before any consideration",
+    s:0, r:2, c:3, cv:2, t:4, co:3, l:2, cost:4, av:3,
+    total:0, conf:"Low — data conflict", rowClass:"verify"
+  },
+  // ── LOW PRIORITY / INSUFFICIENT DATA ────────────────────────────────────────
+  {
+    name:"Nishiyamato Academy", action:"Low priority",
+    type:"Center", typeTag:"center",
+    address:"52 Harold Ave", zip:"95050", phone:"Verify",
+    website:"Verify", websiteUrl:"",
+    ages:"Preschool", hours:"Verify",
+    cat:"A", dist:"~2 mi", drive:"~6 min",
+    commute:"Near (95050)", wfh:"Excellent",
+    langs:"English (Japanese?)", meals:"Verify", outdoor:"Verify",
+    license:"434413506", violations:"12", grade:"C", keyViol:"2 Type B Dec 2018: medical records + staff training",
+    yelp:"—", yelpN:"—", otherRating:"—",
+    sentiment:"Neutral",
+    pos:"95050 location",
+    neg:"Grade C; 12 violations; no positive reviews surfaced in research",
+    s:1, r:1, c:2, cv:5, t:2, co:2, l:3, cost:3, av:3,
+    total:2.05, conf:"Medium — CCL confirmed", rowClass:"low"
+  },
+  {
+    name:"Waha Montessori", action:"Contact Third (if Montessori priority)",
+    type:"Montessori", typeTag:"montessori",
+    address:"95051 (verify via CCLD)", zip:"95051", phone:"Verify",
+    website:"Verify", websiteUrl:"",
+    ages:"Verify (likely 2 yr+)", hours:"Verify",
+    cat:"B", dist:"~4 mi", drive:"~10 min",
+    commute:"No", wfh:"Easy",
+    langs:"English", meals:"Verify", outdoor:"Verify",
+    license:"Verify", violations:"0", grade:"A", keyViol:"None — clean record",
+    yelp:"—", yelpN:"—", otherRating:"—",
+    sentiment:"Neutral",
+    pos:"0 violations; Montessori; 95051",
+    neg:"Very limited info; age minimum unknown; find contact info via CCLD",
+    s:5, r:1, c:3, cv:3, t:2, co:2, l:2, cost:3, av:3,
+    total:2.85, conf:"Low", rowClass:"low"
+  },
+  {
+    name:"Santa Clara Itsy Bitsy Daycare", action:"Contact Third",
+    type:"Home / Montessori-inspired", typeTag:"home montessori",
+    address:"Santa Clara (Nextdoor listing — verify)", zip:"Verify", phone:"Via Nextdoor",
+    website:"—", websiteUrl:"",
+    ages:"18 mo – 5 yr (Montessori-inspired)", hours:"Verify",
+    cat:"Verify", dist:"Verify", drive:"Verify",
+    commute:"Verify", wfh:"Verify",
+    langs:"English", meals:"Verify", outdoor:"Yes (per listing)",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"None found",
+    yelp:"—", yelpN:"—", otherRating:"Nextdoor only",
+    sentiment:"Neutral",
+    pos:"18 mo–5 yr — age range matches perfectly; Montessori-inspired; outdoor play",
+    neg:"No reviews; address unverified — find via Santa Clara Nextdoor search",
+    s:3, r:1, c:3, cv:3, t:5, co:2, l:2, cost:3, av:3,
+    total:2.79, conf:"Low", rowClass:"low"
+  },
+  // ── EXCLUDED ─────────────────────────────────────────────────────────────────
+  {
+    name:"Shalom Christian Academy 🚫 TYPE A VIOLATIONS", action:"Exclude",
+    type:"Center / Faith-based", typeTag:"center",
+    address:"1190 Benton St", zip:"95050", phone:"—",
+    website:"—", websiteUrl:"",
+    ages:"Preschool", hours:"—",
+    cat:"A", dist:"~2 mi", drive:"~6 min",
+    commute:"Near", wfh:"—",
+    langs:"English", meals:"—", outdoor:"—",
+    license:"434415475", violations:"2", grade:"A", keyViol:"🚫 2 TYPE A (2021): Corporal punishment (forced child on nap mat) + dignity violation — ONLY TYPE A IN ALL RESEARCH",
+    yelp:"—", yelpN:"—", otherRating:"—",
+    sentiment:"N/A",
+    pos:"N/A",
+    neg:"🚫 TYPE A VIOLATIONS: Forced physical restraint of child (corporal punishment) AND dignity violation (2021). Most serious citation type. Only Type A found in all research. DO NOT CONTACT.",
+    s:1, r:1, c:1, cv:5, t:1, co:1, l:1, cost:1, av:1,
+    total:0, conf:"High — CCL confirmed", rowClass:"excluded"
+  },
+  {
+    name:"Seedlings Family Daycare 🚫 LICENSE INACTIVE", action:"Exclude",
+    type:"Home", typeTag:"home",
+    address:"631 Harvard Ave", zip:"95051", phone:"—",
+    website:"—", websiteUrl:"",
+    ages:"0 – 3 yr", hours:"—",
+    cat:"B", dist:"~3 mi", drive:"~8 min",
+    commute:"No", wfh:"—",
+    langs:"English", meals:"—", outdoor:"—",
+    license:"Verify (INACTIVE)", violations:"—", grade:"🚫 LICENSE INACTIVE/REVOKED", keyViol:"🚫 License currently inactive or revoked per Winnie (May 2026)",
+    yelp:"—", yelpN:"—", otherRating:"Care.com positive (1 review)",
+    sentiment:"N/A",
+    pos:"Provider Shazia received positive review; \"child was really loved, celebrated, cared for\"",
+    neg:"🚫 LICENSE INACTIVE/REVOKED. Operating without active California license is illegal. Do not use until DSS confirms reinstatement.",
+    s:1, r:1, c:1, cv:1, t:1, co:1, l:1, cost:1, av:1,
+    total:0, conf:"Medium — Winnie flagged", rowClass:"excluded"
+  },
+  {
+    name:"Eagle's Nest Daycare 🚫 CLOSED", action:"Exclude",
+    type:"Home", typeTag:"home",
+    address:"3342 Georgetown Pl", zip:"Verify", phone:"—",
+    website:"—", websiteUrl:"",
+    ages:"—", hours:"—",
+    cat:"—", dist:"—", drive:"—",
+    commute:"—", wfh:"—",
+    langs:"—", meals:"—", outdoor:"—",
+    license:"—", violations:"—", grade:"🚫 CLOSED", keyViol:"🚫 PERMANENTLY CLOSED (confirmed Yelp)",
+    yelp:"Closed", yelpN:"—", otherRating:"—",
+    sentiment:"N/A",
+    pos:"Historical: providers Dani and Silvia were praised; \"like second mothers to all the children\"",
+    neg:"🚫 PERMANENTLY CLOSED. Do not contact.",
+    s:0, r:0, c:0, cv:0, t:0, co:0, l:0, cost:0, av:0,
+    total:0, conf:"High — confirmed", rowClass:"excluded"
+  },
+  {
+    name:"Bright Horizons Stevens Creek 🚫 Quality Collapse", action:"Exclude",
+    type:"Center", typeTag:"center",
+    address:"4945 Stevens Creek Blvd", zip:"95051", phone:"—",
+    website:"brighthorizons.com", websiteUrl:"",
+    ages:"6 wk – 5 yr", hours:"M–F 8:00am–6:00pm",
+    cat:"B", dist:"~4 mi", drive:"~10 min",
+    commute:"No", wfh:"Easy",
+    langs:"English", meals:"Verify", outdoor:"Yes",
+    license:"Verify", violations:"Verify", grade:"Verify", keyViol:"No licensing violations found — quality is the issue",
+    yelp:"Mixed", yelpN:"3.4/5 Birdeye (recent)", otherRating:"Winnie / Daycare.com",
+    sentiment:"Mixed-to-Negative",
+    pos:"One recent 5-star: child learned well, made friends, came home happy",
+    neg:"🚫 Recent pattern: management change → cost-cutting → staff reductions → merged classrooms → some teachers \"lacked child-focused care\" → one parent reported child needed urgent care 7 times in first 2 months → family left for home daycare at half cost with much better outcome.",
+    s:1, r:2, c:1, cv:3, t:3, co:2, l:2, cost:2, av:2,
+    total:0, conf:"High — multiple sources", rowClass:"excluded"
+  }
+];
+
+const EXTRA_LINKS = {
+  "Building Blocks Daycare (Belma)": [["Daycare.com", "https://www.daycare.com/california/santa-clara/"]],
+  "Dreamtree Daycare (Karen & Raena)": [["Care.com", "https://www.care.com/child-care/santa-clara-ca"]],
+  "Children's World Bilingual Montessori (CWBM)": [["AMI Schools", "https://amshq.org/find-a-school"]],
+  "Santa Clara Montessori — El Camino": [["ThreeBestRated", "https://threebestrated.com/daycares-in-santa-clara-ca"]],
+  "Santa Clara Sunshine (Raniji)": [["Wonderschool", "https://www.wonderschool.com/providers/childcare?location=santa-clara-ca"]],
+  "KinderCare Santa Clara": [["NAEYC", "https://www.naeyc.org/accreditation/find-accredited-program"], ["ThreeBestRated", "https://threebestrated.com/daycares-in-santa-clara-ca"]],
+  "Tulip Kids Academy — El Camino": [["NAEYC", "https://www.naeyc.org/accreditation/find-accredited-program"]],
+  "Happy Scholars / Little Scholars (Bilingual)": [["Yahoo Local", "https://local.yahoo.com/search?p=Happy+Scholars+Daycare+Santa+Clara"]],
+  "Santa Clara Joy Family Daycare (Xiangqin Hu)": [["Wonderschool", "https://www.wonderschool.com/providers/childcare?location=santa-clara-ca"], ["Care.com", "https://www.care.com/child-care/santa-clara-ca"]],
+  "Mina Happy Daycare": [["Yahoo Local", "https://local.yahoo.com/search?p=Mina+Happy+Daycare+Santa+Clara"]],
+  "Twinkling Star Daycare (Neha Bansal)": [["Winnie", "https://winnie.com/us/santa-clara-ca"]],
+  "Hummingbird Kidz": [["Winnie", "https://winnie.com/us/santa-clara-ca"]],
+  "World of Dreams Learning Home": [["Winnie", "https://winnie.com/us/santa-clara-ca"]],
+  "My Other Home Daycare": [["Winnie", "https://winnie.com/us/santa-clara-ca"]],
+  "Vennila Kids Academy": [["ThreeBestRated", "https://threebestrated.com/daycares-in-santa-clara-ca"]],
+  "Monticello Academy": [["CareLuLu", "https://www.carelulu.com/preschools-and-daycares/list?city=Santa+Clara&state=CA"]],
+  "Little Star Home Family Daycare": [["Care.com", "https://www.care.com/child-care/santa-clara-ca"]],
+  "SAN Family Daycare": [["CareLuLu", "https://www.carelulu.com/preschools-and-daycares/list?city=Santa+Clara&state=CA"]],
+  "Playful Otter's Daycare (Tiffany)": [["Care.com", "https://www.care.com/child-care/santa-clara-ca"]],
+  "Krupa Patel's Daycare": [["ChildCareCenter.us", "https://childcarecenter.us/search?zip=95054"]],
+  "Bright Starz Preschool ⚠️ Age: 2 yr min": [["Care.com", "https://www.care.com/child-care/santa-clara-ca"]],
+  "Mission College CDC ⚠️ Conflicting data": [["NAEYC", "https://www.naeyc.org/accreditation/find-accredited-program"], ["ChildCareCenter.us", "https://childcarecenter.us/search?zip=95054"]],
+  "Seedlings Family Daycare 🚫 LICENSE INACTIVE": [["Winnie", "https://winnie.com/us/santa-clara-ca"], ["Care.com", "https://www.care.com/child-care/santa-clara-ca"]],
+  "Bright Horizons Stevens Creek 🚫 Quality Collapse": [["Winnie", "https://winnie.com/us/santa-clara-ca"], ["Daycare.com", "https://www.daycare.com/california/santa-clara/"]],
+  "Tulip Kids — Lawrence Station (Sunnyvale)": [["NAEYC", "https://www.naeyc.org/accreditation/find-accredited-program"]],
+  "Kidsville Preschool & Daycare": [["Winnie", "https://winnie.com/us/santa-clara-ca"]]
+};
+function buildSources(d) {
+  const cleanName = d.name.split(/[⚠️🚫]/)[0].trim();
+  const nameEnc = encodeURIComponent(cleanName);
+  const addrEnc = encodeURIComponent([cleanName, d.address||'', 'Santa Clara CA'].join(' '));
+  const licTrim = (d.license||'').trim();
+  const isLicNum = /^\d{7,}$/.test(licTrim);
+  const items = [];
+  if (isLicNum) {
+    items.push(`<a href="https://www.ccld.dss.ca.gov/carefacilitysearch/Details/${licTrim}" target="_blank" title="CA DSS — official CCL facility record (license #${licTrim})">📋 CCLD #${licTrim}</a>`);
+  } else {
+    items.push(`<a href="https://www.ccld.dss.ca.gov/carefacilitysearch/" target="_blank" title="CA Community Care Licensing portal — search by name or address to find license record">📋 CCLD Search</a>`);
+  }
+  items.push(`<a href="https://www.yelp.com/search?find_desc=${nameEnc}&find_loc=Santa+Clara%2C+CA" target="_blank" title="Yelp search for this daycare">⭐ Yelp</a>`);
+  items.push(`<a href="https://www.google.com/maps/search/?api=1&query=${addrEnc}" target="_blank" title="Google Maps — verify address and drive time">🗺️ Maps</a>`);
+  (EXTRA_LINKS[d.name] || []).forEach(([label, url]) => items.push(`<a href="${url}" target="_blank" title="Additional source cited in research">${label}</a>`));
+  return `<div class="src-links">${items.join('')}</div>`;
+}
+function scoreClass(v) {
+  if (!v || v === 0) return 's0';
+  if (v >= 5) return 's5';
+  if (v >= 4) return 's4';
+  if (v >= 3) return 's3';
+  if (v >= 2) return 's2';
+  return 's1';
+}
+function totalClass(t) {
+  if (!t || t === 0) return 'total-low';
+  if (t >= 4.2) return 'total-high';
+  if (t >= 3.7) return 'total-good';
+  if (t >= 3.0) return 'total-ok';
+  return 'total-low';
+}
+function confClass(c) {
+  if (!c) return 'conf-low';
+  if (c.startsWith('High')) return 'conf-high';
+  if (c.startsWith('Med')) return 'conf-med';
+  return 'conf-low';
+}
+function actionBadge(a) {
+  if (!a) return '';
+  const al = a.toLowerCase();
+  if (al.includes('exclude') || al.includes('🚫')) return `<span class="badge badge-exclude">${a}</span>`;
+  if (al.includes('contact first')) return `<span class="badge badge-contact1">Contact First</span>`;
+  if (al.includes('contact second')) return `<span class="badge badge-contact2">Contact Second</span>`;
+  if (al.includes('contact third')) return `<span class="badge badge-contact3">Contact Third</span>`;
+  if (al.includes('verify')) return `<span class="badge badge-verify">${a}</span>`;
+  return `<span class="badge badge-monitor">${a}</span>`;
+}
+function typeBadge(t) {
+  const tl = t.toLowerCase();
+  if (tl.includes('montessori')) return `<span class="type-badge type-montessori">Montessori</span>`;
+  if (tl.includes('bilingual')) return `<span class="type-badge type-bilingual">Bilingual</span>`;
+  if (tl.includes('home')) return `<span class="type-badge type-home">Home</span>`;
+  if (tl.includes('center')) return `<span class="type-badge type-center">Center</span>`;
+  return `<span class="type-badge type-coopscusd">${t}</span>`;
+}
+function catBadge(c) {
+  if (c === 'A') return `<span class="cat-a">A</span>`;
+  if (c === 'B') return `<span class="cat-b">B</span>`;
+  if (c === 'C') return `<span class="cat-c">C</span>`;
+  return c || '—';
+}
+function violations(v, g, k) {
+  if (!v || v === '—' || v === 'Verify') {
+    const glow = (g||'').toLowerCase();
+    if (glow.includes('🚫') || glow.includes('inactive')) return `<span class="violation-flag">${g}</span>`;
+    return `<span class="na">${v || '—'}</span>`;
+  }
+  const n = parseInt(v);
+  if (!isNaN(n)) {
+    if (n === 0) return `<span class="violation-ok">0 ✓</span>`;
+    if (n >= 10) return `<span class="violation-flag">${v}</span>`;
+    if (n >= 6) return `<span style="color:#f59e0b;font-weight:600">${v}</span>`;
+    return `<span>${v}</span>`;
+  }
+  return v;
+}
+function wfhColor(w) {
+  if (!w) return w;
+  if (w === 'Excellent') return `<span style="color:#15803d;font-weight:600">Excellent</span>`;
+  if (w === 'Easy') return `<span style="color:#65a30d">Easy</span>`;
+  if (w === 'Comfortable') return `<span style="color:#d97706">Comfortable</span>`;
+  if (w === 'Borderline') return `<span style="color:#dc2626">Borderline</span>`;
+  if (w === 'Poor') return `<span style="color:#991b1b;font-weight:600">Poor</span>`;
+  if (w.includes('Comfortable')) return `<span style="color:#d97706">${w}</span>`;
+  if (w.includes('Borderline')) return `<span style="color:#dc2626">${w}</span>`;
+  return w;
+}
+
+function buildCard(d) {
+  const cleanName = d.name.split(/[⚠️🚫]/)[0].trim();
+  const nameEnc = encodeURIComponent(cleanName);
+  const addrEnc = encodeURIComponent([cleanName, d.address||'', 'Santa Clara CA'].join(' '));
+  // Phone — tap-to-call on mobile
+  const rawPhone = (d.phone||'').replace(/\D/g,'');
+  const phoneHtml = rawPhone.length >= 10
+    ? `<a href="tel:${rawPhone}">📞 ${d.phone}</a>`
+    : (d.phone && d.phone !== '—' ? `<span>📞 ${d.phone}</span>` : '');
+  // Address linked to Maps
+  const addrHtml = d.address && d.address !== '—' && !/verify/i.test(d.address)
+    ? `<a href="https://www.google.com/maps/search/?api=1&query=${addrEnc}" target="_blank">📍 ${d.address}, ${d.zip||''} · ${d.drive||''}</a>`
+    : '';
+  const websiteHtml = d.websiteUrl ? `<a href="${d.websiteUrl}" target="_blank">🌐 ${d.website}</a>` : '';
+  const hoursHtml = d.hours && d.hours !== 'Verify' && d.hours !== '—' ? `<span>🕐 ${d.hours}${d.ages && d.ages !== '—' ? ' · Ages: '+d.ages : ''}</span>` : '';
+  const totalDisplay = d.total > 0
+    ? `<span class="total-score ${totalClass(d.total)}">${d.total.toFixed(2)}</span>`
+    : `<span class="na" style="font-size:14px">N/A</span>`;
+  // CCL safety block
+  const licTrim = (d.license||'').trim();
+  const isLicNum = /^\d{7,}$/.test(licTrim);
+  const ccldHtml = isLicNum
+    ? `<a href="https://www.ccld.dss.ca.gov/carefacilitysearch/Details/${licTrim}" target="_blank">📋 CCLD #${licTrim}</a>`
+    : `<a href="https://www.ccld.dss.ca.gov/carefacilitysearch/" target="_blank">📋 CCLD Search</a>`;
+  const vNum = parseInt(d.violations||'');
+  const violHtml = !isNaN(vNum)
+    ? (vNum === 0 ? `<span class="violation-ok">0 violations ✓</span>` : `<span class="${vNum>=10?'violation-flag':''}">${vNum} violations</span>`)
+    : (d.violations && d.violations !== '—' ? `<span>${d.violations}</span>` : `<span class="na">Verify</span>`);
+  const keyViolHtml = d.keyViol && !['None found','None','—','None — clean record'].includes(d.keyViol)
+    ? `<div style="color:#dc2626;font-size:11px;margin-top:4px">${d.keyViol}</div>` : '';
+  // Extra sources
+  const extras = (EXTRA_LINKS[d.name]||[]).map(([l,u])=>`<a href="${u}" target="_blank">${l}</a>`).join('');
+  const langMeals = [d.langs!=='—'?'🗣 '+d.langs:'', d.meals&&d.meals!=='—'&&d.meals!=='Verify'?'🍽 '+d.meals:''].filter(Boolean).join(' · ');
+  return `<div class="card ${d.rowClass||''}" data-type="${d.typeTag||''}" data-action="${(d.action||'').toLowerCase()}" data-cat="${d.cat||''}">
+  <div class="card-header">
+    <div class="card-name">${d.name}</div>
+    <div>${totalDisplay}</div>
+  </div>
+  <div class="card-badges">
+    ${actionBadge(d.action)}
+    ${typeBadge(d.type)}
+    ${d.cat ? catBadge(d.cat) : ''}
+  </div>
+  <div class="card-contact">
+    ${phoneHtml}${addrHtml}${websiteHtml}${hoursHtml}
+  </div>
+  <div class="card-hl">
+    ${langMeals ? `<div style="font-size:11px;color:#555;margin-bottom:6px">${langMeals}</div>` : ''}
+    <div class="card-pos">${d.pos||''}</div>
+    ${d.neg ? `<div class="card-neg">${d.neg}</div>` : ''}
+  </div>
+  <details class="card-details">
+    <summary>Safety · Scores · Sources</summary>
+    <div class="card-details-body">
+      <div style="font-size:11px">${ccldHtml} &nbsp;·&nbsp; ${violHtml} &nbsp;·&nbsp; Grade: ${d.grade||'Verify'}</div>
+      ${keyViolHtml}
+      <div class="card-scores">
+        <span class="card-score-item"><span class="score ${scoreClass(d.s)}">${d.s}</span> Safety</span>
+        <span class="card-score-item"><span class="score ${scoreClass(d.r)}">${d.r}</span> Rep</span>
+        <span class="card-score-item"><span class="score ${scoreClass(d.c)}">${d.c}</span> Care</span>
+        <span class="card-score-item"><span class="score ${scoreClass(d.cv)}">${d.cv}</span> Conv</span>
+        <span class="card-score-item"><span class="score ${scoreClass(d.t)}">${d.t}</span> Toddler</span>
+        <span class="card-score-item"><span class="score ${scoreClass(d.co)}">${d.co}</span> Comm</span>
+        <span class="card-score-item"><span class="score ${scoreClass(d.l)}">${d.l}</span> Lang</span>
+        <span class="card-score-item"><span class="score ${scoreClass(d.cost)}">${d.cost}</span> Cost</span>
+        <span class="card-score-item"><span class="score ${scoreClass(d.av)}">${d.av}</span> Avail</span>
+      </div>
+      <div class="src-links">
+        <a href="https://www.yelp.com/search?find_desc=${nameEnc}&find_loc=Santa+Clara%2C+CA" target="_blank">⭐ Yelp</a>
+        ${extras}
+      </div>
+    </div>
+  </details>
+</div>`;
+}
+function renderTable() {
+  const sortBy = document.getElementById('sortBy').value;
+  const catOrder = {A:0,B:1,C:2};
+  const sorted = [...daycares].sort((a,b) => {
+    if (sortBy === 'name') return a.name.localeCompare(b.name);
+    if (sortBy === 'dist') {
+      const ca = catOrder[a.cat]??3, cb = catOrder[b.cat]??3;
+      if (ca !== cb) return ca - cb;
+    }
+    return (b.total||0) - (a.total||0);
+  });
+  document.getElementById('cardGrid').innerHTML = sorted.map(buildCard).join('');
+  filterTable();
+}
+function filterTable() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const fType = document.getElementById('filterType').value;
+  const fCat = document.getElementById('filterCat').value;
+  const fAction = document.getElementById('filterAction').value;
+  const hideEx = document.getElementById('hideExcluded').checked;
+  const cards = document.querySelectorAll('#cardGrid .card');
+  let visible = 0;
+  cards.forEach(card => {
+    const text = card.innerText.toLowerCase();
+    const matchQ = !q || text.includes(q);
+    const matchType = !fType || (card.dataset.type||'').includes(fType);
+    const matchCat = !fCat || card.dataset.cat === fCat;
+    const matchAct = !fAction || (card.dataset.action||'').includes(fAction);
+    const matchHide = !hideEx || !card.classList.contains('excluded');
+    if (matchQ && matchType && matchCat && matchAct && matchHide) { card.classList.remove('hidden'); visible++; }
+    else card.classList.add('hidden');
+  });
+  document.getElementById('rowCount').textContent = `Showing ${visible} of ${cards.length} daycares`;
+}
+renderTable();
+</script>
+</body>
+</html>
