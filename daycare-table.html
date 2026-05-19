@@ -88,6 +88,9 @@
   .src-links { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 0 2px; }
   .src-links a { display: inline-block; padding: 2px 7px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; color: #374151 !important; white-space: nowrap; font-size: 10px; text-decoration: none !important; }
   .src-links a:hover { background: #dbeafe; color: #1e40af !important; border-color: #93c5fd; }
+  .card-links { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 14px 8px; border-top: 1px solid #f0f0f0; }
+  .card-links a { display: inline-block; padding: 2px 7px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; color: #374151 !important; white-space: nowrap; font-size: 10px; text-decoration: none !important; }
+  .card-links a:hover { background: #dbeafe; color: #1e40af !important; border-color: #93c5fd; }
   @media (max-width: 500px) {
     .card-grid { grid-template-columns: 1fr; gap: 10px; padding: 0 10px 36px; }
     h1 { font-size: 17px; }
@@ -1336,8 +1339,8 @@ function buildCard(d) {
   const licTrim = (d.license||'').trim();
   const isLicNum = /^\d{7,}$/.test(licTrim);
   const ccldHtml = isLicNum
-    ? `<a href="https://www.ccld.dss.ca.gov/carefacilitysearch/Details/${licTrim}" target="_blank">📋 CCLD #${licTrim}</a>`
-    : `<a href="https://www.ccld.dss.ca.gov/carefacilitysearch/" target="_blank">📋 CCLD Search</a>`;
+    ? `<a href="https://www.daycaresgrades.com/facility/${licTrim}" target="_blank">📋 CCL #${licTrim}</a>`
+    : `<a href="https://www.google.com/search?q=${nameEnc}+Santa+Clara+daycare+CCL+license+violations" target="_blank">📋 CCL Search</a>`;
   const vNum = parseInt(d.violations||'');
   const violHtml = !isNaN(vNum)
     ? (vNum === 0 ? `<span class="violation-ok">0 violations ✓</span>` : `<span class="${vNum>=10?'violation-flag':''}">${vNum} violations</span>`)
@@ -1346,6 +1349,12 @@ function buildCard(d) {
     ? `<div style="color:#dc2626;font-size:11px;margin-top:4px">${d.keyViol}</div>` : '';
   // Extra sources
   const extras = (EXTRA_LINKS[d.name]||[]).map(([l,u])=>`<a href="${u}" target="_blank">${l}</a>`).join('');
+  // Always-visible links (Yelp + CCLD + extras)
+  const topLinksHtml = `<div class="card-links">
+    <a href="https://www.yelp.com/search?find_desc=${nameEnc}&find_loc=Santa+Clara%2C+CA" target="_blank">⭐ Yelp</a>
+    ${ccldHtml}
+    ${extras}
+  </div>`;
   const langMeals = [d.langs!=='—'?'🗣 '+d.langs:'', d.meals&&d.meals!=='—'&&d.meals!=='Verify'?'🍽 '+d.meals:''].filter(Boolean).join(' · ');
   return `<div class="card ${d.rowClass||''}" data-type="${d.typeTag||''}" data-action="${(d.action||'').toLowerCase()}" data-cat="${d.cat||''}">
   <div class="card-header">
@@ -1360,6 +1369,7 @@ function buildCard(d) {
   <div class="card-contact">
     ${phoneHtml}${addrHtml}${websiteHtml}${hoursHtml}
   </div>
+  ${topLinksHtml}
   <div class="card-hl">
     ${langMeals ? `<div style="font-size:11px;color:#555;margin-bottom:6px">${langMeals}</div>` : ''}
     <div class="card-pos">${d.pos||''}</div>
@@ -1372,9 +1382,9 @@ function buildCard(d) {
     </div>
   </details>
   <details class="card-details">
-    <summary>Safety · Scores · Sources</summary>
+    <summary>Safety · Scores</summary>
     <div class="card-details-body">
-      <div style="font-size:11px">${ccldHtml} &nbsp;·&nbsp; ${violHtml} &nbsp;·&nbsp; Grade: ${d.grade||'Verify'}</div>
+      <div style="font-size:11px">${violHtml} &nbsp;·&nbsp; Grade: ${d.grade||'Verify'}</div>
       ${keyViolHtml}
       <div class="card-scores">
         <span class="card-score-item"><span class="score ${scoreClass(d.s)}">${d.s}</span> Safety</span>
@@ -1386,10 +1396,6 @@ function buildCard(d) {
         <span class="card-score-item"><span class="score ${scoreClass(d.l)}">${d.l}</span> Lang</span>
         <span class="card-score-item"><span class="score ${scoreClass(d.cost)}">${d.cost}</span> Cost</span>
         <span class="card-score-item"><span class="score ${scoreClass(d.av)}">${d.av}</span> Avail</span>
-      </div>
-      <div class="src-links">
-        <a href="https://www.yelp.com/search?find_desc=${nameEnc}&find_loc=Santa+Clara%2C+CA" target="_blank">⭐ Yelp</a>
-        ${extras}
       </div>
     </div>
   </details>
