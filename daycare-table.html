@@ -93,9 +93,40 @@
     h1 { font-size: 17px; }
     .controls input { font-size: 16px; }
   }
+  /* Login overlay */
+  #loginOverlay { position: fixed; inset: 0; background: #1a1a2e; display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .login-box { background: #fff; border-radius: 16px; padding: 36px 32px; width: 320px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.3); text-align: center; }
+  .login-box h2 { font-size: 20px; color: #1a1a2e; margin-bottom: 6px; }
+  .login-box p { font-size: 12px; color: #888; margin-bottom: 24px; }
+  .login-box input { display: block; width: 100%; padding: 10px 14px; margin-bottom: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; outline: none; }
+  .login-box input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+  .login-box button { width: 100%; padding: 11px; background: #1a1a2e; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+  .login-box button:hover { background: #2d2d5e; }
+  .login-err { color: #dc2626; font-size: 12px; margin-top: 10px; min-height: 18px; }
+  /* Notes */
+  details.card-notes { border-top: 1px solid #f0f0f0; }
+  details.card-notes > summary { font-size: 11px; font-weight: 600; color: #6b7280; padding: 8px 14px; cursor: pointer; list-style: none; user-select: none; }
+  details.card-notes > summary::-webkit-details-marker { display: none; }
+  details.card-notes > summary::before { content: '▶  '; font-size: 9px; }
+  details[open].card-notes > summary::before { content: '▼  '; }
+  details.card-notes > summary:hover { color: #374151; background: #f9fafb; }
+  .notes-body { padding: 4px 14px 12px; }
+  .notes-body textarea { width: 100%; min-height: 80px; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; font-family: inherit; resize: vertical; outline: none; color: #374151; }
+  .notes-body textarea:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
+  .note-dot { display: inline-block; width: 7px; height: 7px; background: #6366f1; border-radius: 50%; margin-left: 4px; vertical-align: middle; }
 </style>
 </head>
 <body>
+<div id="loginOverlay">
+  <div class="login-box">
+    <h2>🏫 Daycare Research</h2>
+    <p>Sharma family — private</p>
+    <input type="text" id="loginUser" placeholder="Username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+    <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">Enter</button>
+    <p id="loginErr" class="login-err"></p>
+  </div>
+</div>
 <h1>Santa Clara Daycare Database</h1>
 <p class="subtitle">Research date: May 2026 &nbsp;|&nbsp; Reference point: Rosita Ave, Santa Clara, CA 95050 &nbsp;|&nbsp; Child: ~18–20 months, starting Nov 2026 / Jan 2027</p>
 
@@ -1312,6 +1343,12 @@ function buildCard(d) {
     <div class="card-pos">${d.pos||''}</div>
     ${d.neg ? `<div class="card-neg">${d.neg}</div>` : ''}
   </div>
+  <details class="card-notes">
+    <summary>📝 Notes<span class="note-dot" data-note-key="${d.name}" style="display:${getNotes()[d.name]?'inline-block':'none'}"></span></summary>
+    <div class="notes-body">
+      <textarea placeholder="Add your notes, tour impressions, questions asked…" oninput="saveNote(${JSON.stringify(d.name)}, this.value)">${(getNotes()[d.name]||'').replace(/</g,'&lt;')}</textarea>
+    </div>
+  </details>
   <details class="card-details">
     <summary>Safety · Scores · Sources</summary>
     <div class="card-details-body">
@@ -1370,6 +1407,49 @@ function filterTable() {
   });
   document.getElementById('rowCount').textContent = `Showing ${visible} of ${cards.length} daycares`;
 }
+// ── AUTH ────────────────────────────────────────────────────────────────────
+// To change credentials: open browser console on this page and run:
+//   crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourpassword'))
+//     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
+// Then replace the hash below.
+const USERS = {
+  "tanmay": "666f30ec2919eacf1a1a7cf87d31a98914ecc93ce880a3386e442c8229fe7d53" // password: daycare2026
+};
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+async function doLogin() {
+  const user = document.getElementById('loginUser').value.trim().toLowerCase();
+  const pass = document.getElementById('loginPass').value;
+  const hash = await sha256(pass);
+  if (USERS[user] && USERS[user] === hash) {
+    sessionStorage.setItem('daycare_auth', '1');
+    document.getElementById('loginOverlay').style.display = 'none';
+  } else {
+    document.getElementById('loginErr').textContent = 'Incorrect username or password.';
+    document.getElementById('loginPass').value = '';
+    document.getElementById('loginPass').focus();
+  }
+}
+function checkAuth() {
+  if (sessionStorage.getItem('daycare_auth') === '1') {
+    document.getElementById('loginOverlay').style.display = 'none';
+  } else {
+    setTimeout(() => document.getElementById('loginUser').focus(), 100);
+  }
+}
+// ── NOTES ───────────────────────────────────────────────────────────────────
+function getNotes() { return JSON.parse(localStorage.getItem('daycare_notes') || '{}'); }
+function saveNote(name, text) {
+  const notes = getNotes();
+  if (text.trim()) notes[name] = text; else delete notes[name];
+  localStorage.setItem('daycare_notes', JSON.stringify(notes));
+  // update the note dot indicator without re-rendering the whole card
+  const dots = document.querySelectorAll(`[data-note-key="${CSS.escape(name)}"]`);
+  dots.forEach(d => { d.style.display = text.trim() ? 'inline-block' : 'none'; });
+}
+checkAuth();
 renderTable();
 </script>
 </body>
