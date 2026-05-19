@@ -1501,7 +1501,10 @@ async function saveToken() {
 
 // ── NOTES ───────────────────────────────────────────────────────────────────
 async function initNotes() {
-  if (ghToken) { await pullNotes(); } else {
+  if (ghToken) {
+    const needsPush = await pullNotes();
+    if (needsPush) pushNotes(); // local had notes that GitHub didn't — flush them up
+  } else {
     localNotes = JSON.parse(localStorage.getItem('daycare_notes') || '{}');
   }
 }
@@ -1519,16 +1522,23 @@ async function pullNotes() {
       const local = JSON.parse(localStorage.getItem('daycare_notes') || '{}');
       // local wins — prevents stale GitHub data from overwriting notes typed while sync was broken
       localNotes = Object.assign({}, remote, local);
+      setSyncStatus('synced');
+      localStorage.setItem('daycare_notes', JSON.stringify(localNotes));
+      // signal caller if local had notes that weren't in GitHub (need a push)
+      return JSON.stringify(localNotes) !== JSON.stringify(remote);
     } else if (res.status === 404) {
       localNotes = JSON.parse(localStorage.getItem('daycare_notes') || '{}');
       notesSha = null;
+      setSyncStatus('synced');
+      localStorage.setItem('daycare_notes', JSON.stringify(localNotes));
+      return Object.keys(localNotes).length > 0;
     } else { throw new Error(); }
-    setSyncStatus('synced');
   } catch(e) {
     localNotes = JSON.parse(localStorage.getItem('daycare_notes') || '{}');
     setSyncStatus('error');
+    localStorage.setItem('daycare_notes', JSON.stringify(localNotes));
+    return false;
   }
-  localStorage.setItem('daycare_notes', JSON.stringify(localNotes));
 }
 
 function getNotes() { return localNotes; }
@@ -1542,7 +1552,7 @@ function saveNote(name, text) {
   if (ghToken) { clearTimeout(saveTimer); saveTimer = setTimeout(pushNotes, 2000); }
 }
 
-async function pushNotes() {
+async function pushNotes(retryOnConflict = true) {
   if (!ghToken) return;
   setSyncStatus('syncing');
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(localNotes, null, 2))));
@@ -1554,8 +1564,16 @@ async function pushNotes() {
       headers: { Authorization: `token ${ghToken}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' },
       body: JSON.stringify(body)
     });
-    if (res.ok) { const d = await res.json(); notesSha = d.content.sha; setSyncStatus('synced'); }
-    else setSyncStatus('error');
+    if (res.ok) {
+      const d = await res.json(); notesSha = d.content.sha; setSyncStatus('synced');
+    } else if (res.status === 409 && retryOnConflict) {
+      // SHA out of sync (another device pushed) — re-fetch SHA and retry once
+      const check = await fetch(`https://api.github.com/repos/${REPO}/contents/notes.json`, {
+        headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json' }
+      });
+      if (check.ok) { const d = await check.json(); notesSha = d.sha; }
+      await pushNotes(false);
+    } else { setSyncStatus('error'); }
   } catch(e) { setSyncStatus('error'); }
 }
 
