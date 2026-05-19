@@ -103,6 +103,13 @@
   .login-box button { width: 100%; padding: 11px; background: #1a1a2e; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 4px; }
   .login-box button:hover { background: #2d2d5e; }
   .login-err { color: #dc2626; font-size: 12px; margin-top: 10px; min-height: 18px; }
+  /* Sync banner */
+  #syncBanner { background: #fffbf0; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; margin: 0 16px 10px; font-size: 12px; color: #92400e; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  #syncBanner input { padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; font-family: monospace; flex: 1; min-width: 200px; }
+  #syncBanner button { padding: 5px 12px; background: #1a1a2e; color: #fff; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  /* Token modal */
+  #tokenModal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 999; }
+  #tokenModal.open { display: flex; }
   /* Notes */
   details.card-notes { border-top: 1px solid #f0f0f0; }
   details.card-notes > summary { font-size: 11px; font-weight: 600; color: #6b7280; padding: 8px 14px; cursor: pointer; list-style: none; user-select: none; }
@@ -132,8 +139,18 @@
     <p id="loginErr" class="login-err"></p>
   </div>
 </div>
+<div id="tokenModal">
+  <div class="login-box" style="padding:28px 28px 24px">
+    <h2 style="font-size:17px;margin-bottom:6px">🔗 Connect GitHub Sync</h2>
+    <p style="margin-bottom:16px">Paste your GitHub token to sync notes across devices. <a href="https://github.com/settings/tokens/new?scopes=repo&description=daycare-notes" target="_blank" style="color:#6366f1">Generate one</a> (needs <code>repo</code> scope).</p>
+    <input type="password" id="modalToken" placeholder="ghp_…" style="font-family:monospace;font-size:13px" onkeydown="if(event.key==='Enter')saveToken()">
+    <button onclick="saveToken()" style="margin-top:8px">Save &amp; Sync</button>
+    <button onclick="document.getElementById('tokenModal').classList.remove('open')" style="background:#f3f4f6;color:#374151;margin-top:8px">Cancel</button>
+    <p id="tokenErr" style="color:#dc2626;font-size:12px;margin-top:8px;min-height:16px"></p>
+  </div>
+</div>
 <h1>Santa Clara Daycare Database</h1>
-<p class="subtitle">Research date: May 2026 &nbsp;|&nbsp; Rosita Ave, Santa Clara 95050 &nbsp;|&nbsp; ~18–20 months, starting Nov 2026 / Jan 2027 &nbsp;<span id="syncStatus" style="font-size:11px"></span></p>
+<p class="subtitle">Research date: May 2026 &nbsp;|&nbsp; Rosita Ave, Santa Clara 95050 &nbsp;|&nbsp; ~18–20 months, starting Nov 2026 / Jan 2027 &nbsp;<span id="syncStatus" style="font-size:11px"></span> &nbsp;<button id="syncBtn" onclick="document.getElementById('tokenModal').classList.add('open');document.getElementById('modalToken').focus()" style="display:none;font-size:11px;padding:2px 8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;color:#374151">🔗 Connect sync</button></p>
 
 <div class="legend">
   <strong>Legend:</strong>
@@ -1449,6 +1466,7 @@ async function checkAuth() {
   if (sessionStorage.getItem('daycare_auth') === '1') {
     ghToken = localStorage.getItem('gh_token') || null;
     document.getElementById('loginOverlay').style.display = 'none';
+    if (!ghToken) document.getElementById('syncBtn').style.display = 'inline-block';
     await initNotes();
     renderTable();
   } else {
@@ -1456,6 +1474,22 @@ async function checkAuth() {
     if (localStorage.getItem('gh_token')) document.getElementById('tokenSection').style.display = 'none';
     setTimeout(() => document.getElementById('loginUser').focus(), 100);
   }
+}
+
+async function saveToken() {
+  const token = document.getElementById('modalToken').value.trim();
+  if (!token) { document.getElementById('tokenErr').textContent = 'Please enter a token.'; return; }
+  // Quick validation — try to read the repo
+  const test = await fetch(`https://api.github.com/repos/${REPO}`, {
+    headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' }
+  });
+  if (!test.ok) { document.getElementById('tokenErr').textContent = 'Token invalid or no repo access. Check scopes.'; return; }
+  localStorage.setItem('gh_token', token);
+  ghToken = token;
+  document.getElementById('tokenModal').classList.remove('open');
+  document.getElementById('syncBtn').style.display = 'none';
+  await pushNotes(); // push any notes already saved locally
+  setSyncStatus('synced');
 }
 
 // ── NOTES ───────────────────────────────────────────────────────────────────
