@@ -91,6 +91,12 @@
   .card-links { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 14px 8px; border-top: 1px solid #f0f0f0; }
   .card-links a { display: inline-block; padding: 2px 7px; background: #f3f4f6; border-radius: 4px; border: 1px solid #e5e7eb; color: #374151 !important; white-space: nowrap; font-size: 10px; text-decoration: none !important; }
   .card-links a:hover { background: #dbeafe; color: #1e40af !important; border-color: #93c5fd; }
+  /* Ratings row */
+  .card-ratings { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 6px 14px 8px; border-top: 1px solid #f0f0f0; }
+  .rating-item { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; }
+  .rating-src { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.4px; }
+  .rating-val { font-weight: 700; color: #1a1a2e; }
+  .rating-count { color: #888; font-size: 10px; }
   /* ── Mobile / iPhone ──────────────────────────────────────── */
   @media (max-width: 600px) {
     /* Safe area for iPhone X+ home indicator */
@@ -1407,6 +1413,16 @@ function buildCard(d) {
     ${extras}
   </div>`;
   const langMeals = [d.langs!=='—'?'🗣 '+d.langs:'', d.meals&&d.meals!=='—'&&d.meals!=='Verify'?'🍽 '+d.meals:''].filter(Boolean).join(' · ');
+  // Platform ratings row
+  const hasYelp = d.yelp && d.yelp !== '—';
+  const hasOther = d.otherRating && d.otherRating !== '—';
+  const yelpItem = hasYelp
+    ? `<span class="rating-item"><span class="rating-src">Yelp</span><span class="rating-val">${d.yelp}</span>${d.yelpN && d.yelpN !== '—' ? `<span class="rating-count">${d.yelpN} reviews</span>` : ''}</span>`
+    : '';
+  const otherItem = hasOther
+    ? `<span class="rating-item"><span class="rating-src">Other</span><span class="rating-val">${d.otherRating}</span></span>`
+    : '';
+  const ratingsHtml = (hasYelp || hasOther) ? `<div class="card-ratings">${yelpItem}${otherItem}</div>` : '';
   return `<div class="card ${d.rowClass||''}" data-type="${d.typeTag||''}" data-action="${(d.action||'').toLowerCase()}" data-cat="${d.cat||''}">
   <div class="card-header">
     <div class="card-name">${d.name}</div>
@@ -1421,6 +1437,7 @@ function buildCard(d) {
     ${phoneHtml}${addrHtml}${websiteHtml}${hoursHtml}
   </div>
   ${topLinksHtml}
+  ${ratingsHtml}
   <div class="card-hl">
     ${langMeals ? `<div style="font-size:11px;color:#555;margin-bottom:6px">${langMeals}</div>` : ''}
     <div class="card-pos">${d.pos||''}</div>
