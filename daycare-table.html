@@ -1516,8 +1516,9 @@ async function pullNotes() {
       const data = await res.json();
       notesSha = data.sha;
       const remote = JSON.parse(atob(data.content.replace(/\n/g, '')));
-      // merge: remote wins over stale local
-      localNotes = Object.assign({}, JSON.parse(localStorage.getItem('daycare_notes') || '{}'), remote);
+      const local = JSON.parse(localStorage.getItem('daycare_notes') || '{}');
+      // local wins — prevents stale GitHub data from overwriting notes typed while sync was broken
+      localNotes = Object.assign({}, remote, local);
     } else if (res.status === 404) {
       localNotes = JSON.parse(localStorage.getItem('daycare_notes') || '{}');
       notesSha = null;
