@@ -123,12 +123,17 @@
     <p>Sharma family — private</p>
     <input type="text" id="loginUser" placeholder="Username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
     <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <div id="tokenSection">
+      <hr style="border:none;border-top:1px solid #eee;margin:14px 0 12px">
+      <p style="font-size:11px;color:#888;text-align:left;margin-bottom:8px;line-height:1.5">Enter a GitHub token once per device to sync notes across phone &amp; laptop. <a href="https://github.com/settings/tokens/new?scopes=repo&description=daycare-notes" target="_blank" style="color:#6366f1">Generate one here</a> (needs <code>repo</code> scope).</p>
+      <input type="password" id="loginToken" placeholder="GitHub token (ghp_…)" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()" style="font-family:monospace;font-size:12px">
+    </div>
     <button onclick="doLogin()">Enter</button>
     <p id="loginErr" class="login-err"></p>
   </div>
 </div>
 <h1>Santa Clara Daycare Database</h1>
-<p class="subtitle">Research date: May 2026 &nbsp;|&nbsp; Reference point: Rosita Ave, Santa Clara, CA 95050 &nbsp;|&nbsp; Child: ~18–20 months, starting Nov 2026 / Jan 2027</p>
+<p class="subtitle">Research date: May 2026 &nbsp;|&nbsp; Rosita Ave, Santa Clara 95050 &nbsp;|&nbsp; ~18–20 months, starting Nov 2026 / Jan 2027 &nbsp;<span id="syncStatus" style="font-size:11px"></span></p>
 
 <div class="legend">
   <strong>Legend:</strong>
@@ -1407,50 +1412,120 @@ function filterTable() {
   });
   document.getElementById('rowCount').textContent = `Showing ${visible} of ${cards.length} daycares`;
 }
-// ── AUTH ────────────────────────────────────────────────────────────────────
-// To change credentials: open browser console on this page and run:
-//   crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourpassword'))
-//     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
-// Then replace the hash below.
-const USERS = {
-  "tanmay": "666f30ec2919eacf1a1a7cf87d31a98914ecc93ce880a3386e442c8229fe7d53" // password: daycare2026
-};
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+// To update password: in browser console run sha256('newpass').then(console.log)
+// then replace the hash string below.
+const USERS = { "tanmay": "666f30ec2919eacf1a1a7cf87d31a98914ecc93ce880a3386e442c8229fe7d53" };
+const REPO  = "tanmaysh17/santaclaradaycare";
+
+let ghToken = null, notesSha = null, localNotes = {};
+
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
 }
+
+// ── AUTH ────────────────────────────────────────────────────────────────────
 async function doLogin() {
-  const user = document.getElementById('loginUser').value.trim().toLowerCase();
-  const pass = document.getElementById('loginPass').value;
-  const hash = await sha256(pass);
-  if (USERS[user] && USERS[user] === hash) {
-    sessionStorage.setItem('daycare_auth', '1');
-    document.getElementById('loginOverlay').style.display = 'none';
-  } else {
+  const user  = document.getElementById('loginUser').value.trim().toLowerCase();
+  const pass  = document.getElementById('loginPass').value;
+  const token = (document.getElementById('loginToken').value || '').trim();
+  const hash  = await sha256(pass);
+  if (!USERS[user] || USERS[user] !== hash) {
     document.getElementById('loginErr').textContent = 'Incorrect username or password.';
     document.getElementById('loginPass').value = '';
     document.getElementById('loginPass').focus();
+    return;
   }
+  sessionStorage.setItem('daycare_auth', '1');
+  if (token) localStorage.setItem('gh_token', token);
+  ghToken = localStorage.getItem('gh_token') || null;
+  document.getElementById('loginOverlay').style.display = 'none';
+  await initNotes();
+  renderTable();
 }
-function checkAuth() {
+
+async function checkAuth() {
   if (sessionStorage.getItem('daycare_auth') === '1') {
+    ghToken = localStorage.getItem('gh_token') || null;
     document.getElementById('loginOverlay').style.display = 'none';
+    await initNotes();
+    renderTable();
   } else {
+    // hide token field if already stored on this device
+    if (localStorage.getItem('gh_token')) document.getElementById('tokenSection').style.display = 'none';
     setTimeout(() => document.getElementById('loginUser').focus(), 100);
   }
 }
+
 // ── NOTES ───────────────────────────────────────────────────────────────────
-function getNotes() { return JSON.parse(localStorage.getItem('daycare_notes') || '{}'); }
-function saveNote(name, text) {
-  const notes = getNotes();
-  if (text.trim()) notes[name] = text; else delete notes[name];
-  localStorage.setItem('daycare_notes', JSON.stringify(notes));
-  // update the note dot indicator without re-rendering the whole card
-  const dots = document.querySelectorAll(`[data-note-key="${CSS.escape(name)}"]`);
-  dots.forEach(d => { d.style.display = text.trim() ? 'inline-block' : 'none'; });
+async function initNotes() {
+  if (ghToken) { await pullNotes(); } else {
+    localNotes = JSON.parse(localStorage.getItem('daycare_notes') || '{}');
+  }
 }
+
+async function pullNotes() {
+  setSyncStatus('syncing');
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/contents/notes.json`, {
+      headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      notesSha = data.sha;
+      const remote = JSON.parse(atob(data.content.replace(/\n/g, '')));
+      // merge: remote wins over stale local
+      localNotes = Object.assign({}, JSON.parse(localStorage.getItem('daycare_notes') || '{}'), remote);
+    } else if (res.status === 404) {
+      localNotes = JSON.parse(localStorage.getItem('daycare_notes') || '{}');
+      notesSha = null;
+    } else { throw new Error(); }
+    setSyncStatus('synced');
+  } catch(e) {
+    localNotes = JSON.parse(localStorage.getItem('daycare_notes') || '{}');
+    setSyncStatus('error');
+  }
+  localStorage.setItem('daycare_notes', JSON.stringify(localNotes));
+}
+
+function getNotes() { return localNotes; }
+
+let saveTimer = null;
+function saveNote(name, text) {
+  if (text.trim()) localNotes[name] = text; else delete localNotes[name];
+  localStorage.setItem('daycare_notes', JSON.stringify(localNotes));
+  document.querySelectorAll(`[data-note-key="${CSS.escape(name)}"]`)
+    .forEach(d => { d.style.display = text.trim() ? 'inline-block' : 'none'; });
+  if (ghToken) { clearTimeout(saveTimer); saveTimer = setTimeout(pushNotes, 2000); }
+}
+
+async function pushNotes() {
+  if (!ghToken) return;
+  setSyncStatus('syncing');
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(localNotes, null, 2))));
+  const body = { message: 'Update daycare notes', content };
+  if (notesSha) body.sha = notesSha;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${REPO}/contents/notes.json`, {
+      method: 'PUT',
+      headers: { Authorization: `token ${ghToken}`, 'Content-Type': 'application/json', Accept: 'application/vnd.github.v3+json' },
+      body: JSON.stringify(body)
+    });
+    if (res.ok) { const d = await res.json(); notesSha = d.content.sha; setSyncStatus('synced'); }
+    else setSyncStatus('error');
+  } catch(e) { setSyncStatus('error'); }
+}
+
+function setSyncStatus(s) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.textContent = s === 'syncing' ? '⟳ Saving…' : s === 'synced' ? '✓ Notes synced' : '⚠ Sync error — check token';
+  el.style.color  = s === 'syncing' ? '#888' : s === 'synced' ? '#16a34a' : '#dc2626';
+  if (s === 'synced') setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
 checkAuth();
-renderTable();
 </script>
 </body>
 </html>
