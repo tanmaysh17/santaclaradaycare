@@ -1378,7 +1378,7 @@ function buildCard(d) {
   <details class="card-notes">
     <summary>📝 Notes<span class="note-dot" data-note-key="${d.name}" style="display:${getNotes()[d.name]?'inline-block':'none'}"></span></summary>
     <div class="notes-body">
-      <textarea placeholder="Add your notes, tour impressions, questions asked…" oninput="saveNote(${JSON.stringify(d.name)}, this.value)">${(getNotes()[d.name]||'').replace(/</g,'&lt;')}</textarea>
+      <textarea placeholder="Add your notes, tour impressions, questions asked…" oninput="saveNote(${JSON.stringify(d.name).replace(/"/g,'&quot;')}, this.value)">${(getNotes()[d.name]||'').replace(/</g,'&lt;')}</textarea>
     </div>
   </details>
   <details class="card-details">
