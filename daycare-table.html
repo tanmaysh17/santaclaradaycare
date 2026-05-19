@@ -199,11 +199,6 @@
     <p>Sharma family — private</p>
     <input type="text" id="loginUser" placeholder="Username" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
     <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-    <div id="tokenSection">
-      <hr style="border:none;border-top:1px solid #eee;margin:14px 0 12px">
-      <p style="font-size:11px;color:#888;text-align:left;margin-bottom:8px;line-height:1.5">Enter a GitHub token once per device to sync notes across phone &amp; laptop. <a href="https://github.com/settings/tokens/new?scopes=repo&description=daycare-notes" target="_blank" style="color:#6366f1">Generate one here</a> (needs <code>repo</code> scope).</p>
-      <input type="password" id="loginToken" placeholder="GitHub token (ghp_…)" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()" style="font-family:monospace;font-size:16px">
-    </div>
     <button onclick="doLogin()">Enter</button>
     <p id="loginErr" class="login-err"></p>
   </div>
@@ -219,7 +214,7 @@
   </div>
 </div>
 <h1>Santa Clara Daycare Database</h1>
-<p class="subtitle"><span>Rosita Ave, Santa Clara 95050 &nbsp;·&nbsp; ~18–20 mo, Nov 2026 / Jan 2027</span><span id="syncStatus" style="font-size:11px"></span><button id="syncBtn" onclick="document.getElementById('tokenModal').classList.add('open');document.getElementById('modalToken').focus()" style="display:none;font-size:11px;padding:2px 8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;color:#374151">🔗 Connect sync</button><button onclick="doLogout()" style="font-size:11px;padding:2px 8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;color:#374151">🚪 Logout</button></p>
+<p class="subtitle"><span>Rosita Ave, Santa Clara 95050 &nbsp;·&nbsp; ~18–20 mo, Nov 2026 / Jan 2027</span><span id="syncStatus" style="font-size:11px"></span><button id="syncBtn" onclick="document.getElementById('tokenModal').classList.add('open');document.getElementById('modalToken').focus()" style="display:none;font-size:11px;padding:3px 10px;background:#ede9fe;border:1px solid #c4b5fd;border-radius:4px;cursor:pointer;color:#5b21b6;font-weight:600">🔗 Connect sync</button><button onclick="doLogout()" style="font-size:11px;padding:2px 8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;color:#374151">🚪 Logout</button></p>
 
 <div class="legend">
   <strong>Legend:</strong>
@@ -1516,10 +1511,9 @@ async function sha256(str) {
 
 // ── AUTH ────────────────────────────────────────────────────────────────────
 async function doLogin() {
-  const user  = document.getElementById('loginUser').value.trim().toLowerCase();
-  const pass  = document.getElementById('loginPass').value;
-  const token = (document.getElementById('loginToken').value || '').trim();
-  const hash  = await sha256(pass);
+  const user = document.getElementById('loginUser').value.trim().toLowerCase();
+  const pass = document.getElementById('loginPass').value;
+  const hash = await sha256(pass);
   if (!USERS[user] || USERS[user] !== hash) {
     document.getElementById('loginErr').textContent = 'Incorrect username or password.';
     document.getElementById('loginPass').value = '';
@@ -1527,7 +1521,6 @@ async function doLogin() {
     return;
   }
   sessionStorage.setItem('daycare_auth', '1');
-  if (token) localStorage.setItem('gh_token', token);
   ghToken = localStorage.getItem('gh_token') || null;
   document.getElementById('loginOverlay').style.display = 'none';
   await initNotes();
@@ -1542,8 +1535,6 @@ async function checkAuth() {
     await initNotes();
     renderTable();
   } else {
-    // hide token field if already stored on this device
-    if (localStorage.getItem('gh_token')) document.getElementById('tokenSection').style.display = 'none';
     setTimeout(() => document.getElementById('loginUser').focus(), 100);
   }
 }
