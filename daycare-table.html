@@ -153,7 +153,7 @@
   </div>
 </div>
 <h1>Santa Clara Daycare Database</h1>
-<p class="subtitle">Research date: May 2026 &nbsp;|&nbsp; Rosita Ave, Santa Clara 95050 &nbsp;|&nbsp; ~18–20 months, starting Nov 2026 / Jan 2027 &nbsp;<span id="syncStatus" style="font-size:11px"></span> &nbsp;<button id="syncBtn" onclick="document.getElementById('tokenModal').classList.add('open');document.getElementById('modalToken').focus()" style="display:none;font-size:11px;padding:2px 8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;color:#374151">🔗 Connect sync</button></p>
+<p class="subtitle">Research date: May 2026 &nbsp;|&nbsp; Rosita Ave, Santa Clara 95050 &nbsp;|&nbsp; ~18–20 months, starting Nov 2026 / Jan 2027 &nbsp;<span id="syncStatus" style="font-size:11px"></span> &nbsp;<button id="syncBtn" onclick="document.getElementById('tokenModal').classList.add('open');document.getElementById('modalToken').focus()" style="display:none;font-size:11px;padding:2px 8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;color:#374151">🔗 Connect sync</button> &nbsp;<button onclick="doLogout()" style="font-size:11px;padding:2px 8px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;color:#374151">🚪 Logout</button></p>
 
 <div class="legend">
   <strong>Legend:</strong>
@@ -1563,6 +1563,11 @@ function setSyncStatus(s) {
   el.textContent = s === 'syncing' ? '⟳ Saving…' : s === 'synced' ? '✓ Notes synced' : '⚠ Sync error — check token';
   el.style.color  = s === 'syncing' ? '#888' : s === 'synced' ? '#16a34a' : '#dc2626';
   if (s === 'synced') setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
+function doLogout() {
+  sessionStorage.removeItem('daycare_auth');
+  location.reload();
 }
 
 checkAuth();
