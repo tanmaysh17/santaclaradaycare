@@ -1493,6 +1493,7 @@ async function saveToken() {
   localStorage.setItem('gh_token', token);
   ghToken = token;
   document.getElementById('tokenModal').classList.remove('open');
+  document.getElementById('syncBtn').textContent = '🔗 Connect sync';
   document.getElementById('syncBtn').style.display = 'none';
   await pushNotes(); // push any notes already saved locally
   setSyncStatus('synced');
@@ -1560,9 +1561,12 @@ async function pushNotes() {
 function setSyncStatus(s) {
   const el = document.getElementById('syncStatus');
   if (!el) return;
-  el.textContent = s === 'syncing' ? '⟳ Saving…' : s === 'synced' ? '✓ Notes synced' : '⚠ Sync error — check token';
+  el.textContent = s === 'syncing' ? '⟳ Saving…' : s === 'synced' ? '✓ Notes synced' : '⚠ Sync error —';
   el.style.color  = s === 'syncing' ? '#888' : s === 'synced' ? '#16a34a' : '#dc2626';
-  if (s === 'synced') setTimeout(() => { el.textContent = ''; }, 3000);
+  const btn = document.getElementById('syncBtn');
+  if (s === 'error') { btn.textContent = '🔑 Update token'; btn.style.display = 'inline-block'; }
+  else if (s === 'synced') { btn.style.display = 'none'; btn.textContent = '🔗 Connect sync'; setTimeout(() => { el.textContent = ''; }, 3000); }
+  else if (s === 'syncing' && btn.textContent !== '🔑 Update token') { btn.style.display = 'none'; }
 }
 
 function doLogout() {
